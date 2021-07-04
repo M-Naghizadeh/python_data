@@ -1,0 +1,1165 @@
+
+   #[1]Index [2]Search [3]Time series / date functionality [4]Group by:
+   split-apply-combine
+
+   [5]logo
+   (BUTTON)
+     * [6]Getting started
+     * [7]User Guide
+     * [8]API reference
+     * [9]Development
+     * [10]Release notes
+
+     * [11]GitHub
+     * [12]Twitter
+
+   ____________________
+
+     * [13]10 minutes to pandas
+     * [14]Intro to data structures
+     * [15]Essential basic functionality
+     * [16]IO tools (text, CSV, HDF5, …)
+     * [17]Indexing and selecting data
+     * [18]MultiIndex / advanced indexing
+     * [19]Merge, join, concatenate and compare
+     * [20]Reshaping and pivot tables
+     * [21]Working with text data
+     * [22]Working with missing data
+     * [23]Duplicate Labels
+     * [24]Categorical data
+     * [25]Nullable integer data type
+     * [26]Nullable Boolean data type
+     * [27]Chart Visualization
+     * [28]Table Visualization
+     * [29]Computational tools
+     * [30]Group by: split-apply-combine
+     * [31]Windowing Operations
+     * [32]Time series / date functionality
+     * [33]Time deltas
+     * [34]Options and settings
+     * [35]Enhancing performance
+     * [36]Scaling to large datasets
+     * [37]Sparse data structures
+     * [38]Frequently Asked Questions (FAQ)
+     * [39]Cookbook
+
+   On this page
+
+     * [40]Overview
+     * [41]Rolling window
+          + [42]Centering windows
+          + [43]Rolling window endpoints
+          + [44]Custom window rolling
+          + [45]Rolling apply
+          + [46]Numba engine
+          + [47]Binary window functions
+          + [48]Computing rolling pairwise covariances and correlations
+     * [49]Weighted window
+     * [50]Expanding window
+     * [51]Exponentially Weighted window
+
+Windowing Operations[52]¶
+
+   pandas contains a compact set of APIs for performing windowing
+   operations - an operation that performs an aggregation over a sliding
+   partition of values. The API functions similarly to the groupby API in
+   that [53]Series and [54]DataFrame call the windowing method with
+   necessary parameters and then subsequently call the aggregation
+   function.
+In [1]: s = pd.Series(range(5))
+
+In [2]: s.rolling(window=2).sum()
+Out[2]:
+0    NaN
+1    1.0
+2    3.0
+3    5.0
+4    7.0
+dtype: float64
+
+   The windows are comprised by looking back the length of the window from
+   the current observation. The result above can be derived by taking the
+   sum of the following windowed partitions of data:
+In [3]: for window in s.rolling(window=2):
+   ...:     print(window)
+   ...:
+0    0
+dtype: int64
+0    0
+1    1
+dtype: int64
+1    1
+2    2
+dtype: int64
+2    2
+3    3
+dtype: int64
+3    3
+4    4
+dtype: int64
+
+Overview[55]¶
+
+   pandas supports 4 types of windowing operations:
+    1. Rolling window: Generic fixed or variable sliding window over the
+       values.
+    2. Weighted window: Weighted, non-rectangular window supplied by the
+       scipy.signal library.
+    3. Expanding window: Accumulating window over the values.
+    4. Exponentially Weighted window: Accumulating and exponentially
+       weighted window over the values.
+
+   Concept
+
+   Method
+
+   Returned Object
+
+   Supports time-based windows
+
+   Supports chained groupby
+
+   Supports table method
+
+   Supports online operations
+
+   Rolling window
+
+   rolling
+
+   Rolling
+
+   Yes
+
+   Yes
+
+   Yes (as of version 1.3)
+
+   No
+
+   Weighted window
+
+   rolling
+
+   Window
+
+   No
+
+   No
+
+   No
+
+   No
+
+   Expanding window
+
+   expanding
+
+   Expanding
+
+   No
+
+   Yes
+
+   Yes (as of version 1.3)
+
+   No
+
+   Exponentially Weighted window
+
+   ewm
+
+   ExponentialMovingWindow
+
+   No
+
+   Yes (as of version 1.2)
+
+   No
+
+   Yes (as of version 1.3)
+
+   As noted above, some operations support specifying a window based on a
+   time offset:
+In [4]: s = pd.Series(range(5), index=pd.date_range('2020-01-01', periods=5, fre
+q='1D'))
+
+In [5]: s.rolling(window='2D').sum()
+Out[5]:
+2020-01-01    0.0
+2020-01-02    1.0
+2020-01-03    3.0
+2020-01-04    5.0
+2020-01-05    7.0
+Freq: D, dtype: float64
+
+   Additionally, some methods support chaining a groupby operation with a
+   windowing operation which will first group the data by the specified
+   keys and then perform a windowing operation per group.
+In [6]: df = pd.DataFrame({'A': ['a', 'b', 'a', 'b', 'a'], 'B': range(5)})
+
+In [7]: df.groupby('A').expanding().sum()
+Out[7]:
+       B
+A
+a 0  0.0
+  2  2.0
+  4  6.0
+b 1  1.0
+  3  4.0
+
+   Note
+
+   Windowing operations currently only support numeric data (integer and
+   float) and will always return float64 values.
+
+   Warning
+
+   Some windowing aggregation, mean, sum, var and std methods may suffer
+   from numerical imprecision due to the underlying windowing algorithms
+   accumulating sums. When values differ with magnitude
+   \(1/np.finfo(np.double).eps\) this results in truncation. It must be
+   noted, that large values may have an impact on windows, which do not
+   include these values. [56]Kahan summation is used to compute the
+   rolling sums to preserve accuracy as much as possible.
+
+   New in version 1.3.0.
+
+   Some windowing operations also support the method='table' option in the
+   constructor which performs the windowing operation over an entire
+   [57]DataFrame instead of a single column or row at a time. This can
+   provide a useful performance benefit for a [58]DataFrame with many
+   columns or rows (with the corresponding axis argument) or the ability
+   to utilize other columns during the windowing operation. The
+   method='table' option can only be used if engine='numba' is specified
+   in the corresponding method call.
+
+   For example, a [59]weighted mean calculation can be calculated with
+   apply() by specifying a separate column of weights.
+In [8]: def weighted_mean(x):
+   ...:     arr = np.ones((1, x.shape[1]))
+   ...:     arr[:, :2] = (x[:, :2] * x[:, 2]).sum(axis=0) / x[:, 2].sum()
+   ...:     return arr
+   ...:
+
+In [9]: df = pd.DataFrame([[1, 2, 0.6], [2, 3, 0.4], [3, 4, 0.2], [4, 5, 0.7]])
+
+In [10]: df.rolling(2, method="table", min_periods=0).apply(weighted_mean, raw=T
+rue, engine="numba")  # noqa:E501
+Out[10]:
+          0         1    2
+0  1.000000  2.000000  1.0
+1  1.800000  2.000000  1.0
+2  3.333333  2.333333  1.0
+3  1.555556  7.000000  1.0
+
+   New in version 1.3.
+
+   Some windowing operations also support an online method after
+   constructing a windowing object which returns a new object that
+   supports passing in new [60]DataFrame or [61]Series objects to continue
+   the windowing calculation with the new values (i.e. online
+   calculations).
+
+   The methods on this new windowing objects must call the aggregation
+   method first to “prime” the initial state of the online calculation.
+   Then, new [62]DataFrame or [63]Series objects can be passed in the
+   update argument to continue the windowing calculation.
+In [11]: df = pd.DataFrame([[1, 2, 0.6], [2, 3, 0.4], [3, 4, 0.2], [4, 5, 0.7]])
+
+In [12]: df.ewm(0.5).mean()
+Out[12]:
+          0         1         2
+0  1.000000  2.000000  0.600000
+1  1.750000  2.750000  0.450000
+2  2.615385  3.615385  0.276923
+3  3.550000  4.550000  0.562500
+
+In [13]: online_ewm = df.head(2).ewm(0.5).online()
+
+In [14]: online_ewm.mean()
+Out[14]:
+      0     1     2
+0  1.00  2.00  0.60
+1  1.75  2.75  0.45
+
+In [15]: online_ewm.mean(update=df.tail(1))
+Out[15]:
+          0         1         2
+3  3.307692  4.307692  0.623077
+
+   All windowing operations support a min_periods argument that dictates
+   the minimum amount of non-np.nan values a window must have; otherwise,
+   the resulting value is np.nan. min_periods defaults to 1 for time-based
+   windows and window for fixed windows
+In [16]: s = pd.Series([np.nan, 1, 2, np.nan, np.nan, 3])
+
+In [17]: s.rolling(window=3, min_periods=1).sum()
+Out[17]:
+0    NaN
+1    1.0
+2    3.0
+3    3.0
+4    2.0
+5    3.0
+dtype: float64
+
+In [18]: s.rolling(window=3, min_periods=2).sum()
+Out[18]:
+0    NaN
+1    NaN
+2    3.0
+3    3.0
+4    NaN
+5    NaN
+dtype: float64
+
+# Equivalent to min_periods=3
+In [19]: s.rolling(window=3, min_periods=None).sum()
+Out[19]:
+0   NaN
+1   NaN
+2   NaN
+3   NaN
+4   NaN
+5   NaN
+dtype: float64
+
+   Additionally, all windowing operations supports the aggregate method
+   for returning a result of multiple aggregations applied to a window.
+In [20]: df = pd.DataFrame({"A": range(5), "B": range(10, 15)})
+
+In [21]: df.expanding().agg([np.sum, np.mean, np.std])
+Out[21]:
+      A                    B
+    sum mean       std   sum  mean       std
+0   0.0  0.0       NaN  10.0  10.0       NaN
+1   1.0  0.5  0.707107  21.0  10.5  0.707107
+2   3.0  1.0  1.000000  33.0  11.0  1.000000
+3   6.0  1.5  1.290994  46.0  11.5  1.290994
+4  10.0  2.0  1.581139  60.0  12.0  1.581139
+
+Rolling window[64]¶
+
+   Generic rolling windows support specifying windows as a fixed number of
+   observations or variable number of observations based on an offset. If
+   a time based offset is provided, the corresponding time based index
+   must be monotonic.
+In [22]: times = ['2020-01-01', '2020-01-03', '2020-01-04', '2020-01-05', '2020-
+01-29']
+
+In [23]: s = pd.Series(range(5), index=pd.DatetimeIndex(times))
+
+In [24]: s
+Out[24]:
+2020-01-01    0
+2020-01-03    1
+2020-01-04    2
+2020-01-05    3
+2020-01-29    4
+dtype: int64
+
+# Window with 2 observations
+In [25]: s.rolling(window=2).sum()
+Out[25]:
+2020-01-01    NaN
+2020-01-03    1.0
+2020-01-04    3.0
+2020-01-05    5.0
+2020-01-29    7.0
+dtype: float64
+
+# Window with 2 days worth of observations
+In [26]: s.rolling(window='2D').sum()
+Out[26]:
+2020-01-01    0.0
+2020-01-03    1.0
+2020-01-04    3.0
+2020-01-05    5.0
+2020-01-29    4.0
+dtype: float64
+
+   For all supported aggregation functions, see [65]Rolling window
+   functions.
+
+Centering windows[66]¶
+
+   By default the labels are set to the right edge of the window, but a
+   center keyword is available so the labels can be set at the center.
+In [27]: s = pd.Series(range(10))
+
+In [28]: s.rolling(window=5).mean()
+Out[28]:
+0    NaN
+1    NaN
+2    NaN
+3    NaN
+4    2.0
+5    3.0
+6    4.0
+7    5.0
+8    6.0
+9    7.0
+dtype: float64
+
+In [29]: s.rolling(window=5, center=True).mean()
+Out[29]:
+0    NaN
+1    NaN
+2    2.0
+3    3.0
+4    4.0
+5    5.0
+6    6.0
+7    7.0
+8    NaN
+9    NaN
+dtype: float64
+
+   This can also be applied to datetime-like indices.
+
+   New in version 1.3.0.
+In [30]: df = pd.DataFrame(
+   ....:     {"A": [0, 1, 2, 3, 4]}, index=pd.date_range("2020", periods=5, freq
+="1D")
+   ....: )
+   ....:
+
+In [31]: df
+Out[31]:
+            A
+2020-01-01  0
+2020-01-02  1
+2020-01-03  2
+2020-01-04  3
+2020-01-05  4
+
+In [32]: df.rolling("2D", center=False).mean()
+Out[32]:
+              A
+2020-01-01  0.0
+2020-01-02  0.5
+2020-01-03  1.5
+2020-01-04  2.5
+2020-01-05  3.5
+
+In [33]: df.rolling("2D", center=True).mean()
+Out[33]:
+              A
+2020-01-01  0.5
+2020-01-02  1.5
+2020-01-03  2.5
+2020-01-04  3.5
+2020-01-05  4.0
+
+Rolling window endpoints[67]¶
+
+   The inclusion of the interval endpoints in rolling window calculations
+   can be specified with the closed parameter:
+
+   Value
+
+   Behavior
+
+   'right'
+
+   close right endpoint
+
+   'left'
+
+   close left endpoint
+
+   'both'
+
+   close both endpoints
+
+   'neither'
+
+   open endpoints
+
+   For example, having the right endpoint open is useful in many problems
+   that require that there is no contamination from present information
+   back to past information. This allows the rolling window to compute
+   statistics “up to that point in time”, but not including that point in
+   time.
+In [34]: df = pd.DataFrame(
+   ....:     {"x": 1},
+   ....:     index=[
+   ....:         pd.Timestamp("20130101 09:00:01"),
+   ....:         pd.Timestamp("20130101 09:00:02"),
+   ....:         pd.Timestamp("20130101 09:00:03"),
+   ....:         pd.Timestamp("20130101 09:00:04"),
+   ....:         pd.Timestamp("20130101 09:00:06"),
+   ....:     ],
+   ....: )
+   ....:
+
+In [35]: df["right"] = df.rolling("2s", closed="right").x.sum()  # default
+
+In [36]: df["both"] = df.rolling("2s", closed="both").x.sum()
+
+In [37]: df["left"] = df.rolling("2s", closed="left").x.sum()
+
+In [38]: df["neither"] = df.rolling("2s", closed="neither").x.sum()
+
+In [39]: df
+Out[39]:
+                     x  right  both  left  neither
+2013-01-01 09:00:01  1    1.0   1.0   NaN      NaN
+2013-01-01 09:00:02  1    2.0   2.0   1.0      1.0
+2013-01-01 09:00:03  1    2.0   3.0   2.0      1.0
+2013-01-01 09:00:04  1    2.0   3.0   2.0      1.0
+2013-01-01 09:00:06  1    1.0   2.0   1.0      NaN
+
+Custom window rolling[68]¶
+
+   New in version 1.0.
+
+   In addition to accepting an integer or offset as a window argument,
+   rolling also accepts a BaseIndexer subclass that allows a user to
+   define a custom method for calculating window bounds. The BaseIndexer
+   subclass will need to define a get_window_bounds method that returns a
+   tuple of two arrays, the first being the starting indices of the
+   windows and second being the ending indices of the windows.
+   Additionally, num_values, min_periods, center, closed and will
+   automatically be passed to get_window_bounds and the defined method
+   must always accept these arguments.
+
+   For example, if we have the following [69]DataFrame
+In [40]: use_expanding = [True, False, True, False, True]
+
+In [41]: use_expanding
+Out[41]: [True, False, True, False, True]
+
+In [42]: df = pd.DataFrame({"values": range(5)})
+
+In [43]: df
+Out[43]:
+   values
+0       0
+1       1
+2       2
+3       3
+4       4
+
+   and we want to use an expanding window where use_expanding is True
+   otherwise a window of size 1, we can create the following BaseIndexer
+   subclass:
+In [2]: from pandas.api.indexers import BaseIndexer
+...:
+...: class CustomIndexer(BaseIndexer):
+...:
+...:    def get_window_bounds(self, num_values, min_periods, center, closed):
+...:        start = np.empty(num_values, dtype=np.int64)
+...:        end = np.empty(num_values, dtype=np.int64)
+...:        for i in range(num_values):
+...:            if self.use_expanding[i]:
+...:                start[i] = 0
+...:                end[i] = i + 1
+...:            else:
+...:                start[i] = i
+...:                end[i] = i + self.window_size
+...:        return start, end
+...:
+
+In [3]: indexer = CustomIndexer(window_size=1, use_expanding=use_expanding)
+
+In [4]: df.rolling(indexer).sum()
+Out[4]:
+    values
+0     0.0
+1     1.0
+2     3.0
+3     3.0
+4    10.0
+
+   You can view other examples of BaseIndexer subclasses [70]here
+
+   New in version 1.1.
+
+   One subclass of note within those examples is the
+   VariableOffsetWindowIndexer that allows rolling operations over a
+   non-fixed offset like a BusinessDay.
+In [44]: from pandas.api.indexers import VariableOffsetWindowIndexer
+
+In [45]: df = pd.DataFrame(range(10), index=pd.date_range("2020", periods=10))
+
+In [46]: offset = pd.offsets.BDay(1)
+
+In [47]: indexer = VariableOffsetWindowIndexer(index=df.index, offset=offset)
+
+In [48]: df
+Out[48]:
+            0
+2020-01-01  0
+2020-01-02  1
+2020-01-03  2
+2020-01-04  3
+2020-01-05  4
+2020-01-06  5
+2020-01-07  6
+2020-01-08  7
+2020-01-09  8
+2020-01-10  9
+
+In [49]: df.rolling(indexer).sum()
+Out[49]:
+               0
+2020-01-01   0.0
+2020-01-02   1.0
+2020-01-03   2.0
+2020-01-04   3.0
+2020-01-05   7.0
+2020-01-06  12.0
+2020-01-07   6.0
+2020-01-08   7.0
+2020-01-09   8.0
+2020-01-10   9.0
+
+   For some problems knowledge of the future is available for analysis.
+   For example, this occurs when each data point is a full time series
+   read from an experiment, and the task is to extract underlying
+   conditions. In these cases it can be useful to perform forward-looking
+   rolling window computations. [71]FixedForwardWindowIndexer class is
+   available for this purpose. This [72]BaseIndexer subclass implements a
+   closed fixed-width forward-looking rolling window, and we can use it as
+   follows:
+In [50]: from pandas.api.indexers import FixedForwardWindowIndexer
+
+In [51]: indexer = FixedForwardWindowIndexer(window_size=2)
+
+In [52]: df.rolling(indexer, min_periods=1).sum()
+Out[52]:
+               0
+2020-01-01   1.0
+2020-01-02   3.0
+2020-01-03   5.0
+2020-01-04   7.0
+2020-01-05   9.0
+2020-01-06  11.0
+2020-01-07  13.0
+2020-01-08  15.0
+2020-01-09  17.0
+2020-01-10   9.0
+
+   We can also achieve this by using slicing, applying rolling
+   aggregation, and then flipping the result as shown in example below:
+In [53]: df = pd.DataFrame(
+   ....:     data=[
+   ....:         [pd.Timestamp("2018-01-01 00:00:00"), 100],
+   ....:         [pd.Timestamp("2018-01-01 00:00:01"), 101],
+   ....:         [pd.Timestamp("2018-01-01 00:00:03"), 103],
+   ....:         [pd.Timestamp("2018-01-01 00:00:04"), 111],
+   ....:     ],
+   ....:     columns=["time", "value"],
+   ....: ).set_index("time")
+   ....:
+
+In [54]: df
+Out[54]:
+                     value
+time
+2018-01-01 00:00:00    100
+2018-01-01 00:00:01    101
+2018-01-01 00:00:03    103
+2018-01-01 00:00:04    111
+
+In [55]: reversed_df = df[::-1].rolling("2s").sum()[::-1]
+
+In [56]: reversed_df
+Out[56]:
+                     value
+time
+2018-01-01 00:00:00  201.0
+2018-01-01 00:00:01  101.0
+2018-01-01 00:00:03  214.0
+2018-01-01 00:00:04  111.0
+
+Rolling apply[73]¶
+
+   The apply() function takes an extra func argument and performs generic
+   rolling computations. The func argument should be a single function
+   that produces a single value from an ndarray input. raw specifies
+   whether the windows are cast as [74]Series objects (raw=False) or
+   ndarray objects (raw=True).
+In [57]: def mad(x):
+   ....:     return np.fabs(x - x.mean()).mean()
+   ....:
+
+In [58]: s = pd.Series(range(10))
+
+In [59]: s.rolling(window=4).apply(mad, raw=True)
+Out[59]:
+0    NaN
+1    NaN
+2    NaN
+3    1.0
+4    1.0
+5    1.0
+6    1.0
+7    1.0
+8    1.0
+9    1.0
+dtype: float64
+
+Numba engine[75]¶
+
+   New in version 1.0.
+
+   Additionally, apply() can leverage [76]Numba if installed as an
+   optional dependency. The apply aggregation can be executed using Numba
+   by specifying engine='numba' and engine_kwargs arguments (raw must also
+   be set to True). Numba will be applied in potentially two routines:
+    1. If func is a standard Python function, the engine will [77]JIT the
+       passed function. func can also be a JITed function in which case
+       the engine will not JIT the function again.
+    2. The engine will JIT the for loop where the apply function is
+       applied to each window.
+
+   New in version 1.3.0.
+
+   mean, median, max, min, and sum also support the engine and
+   engine_kwargs arguments.
+
+   The engine_kwargs argument is a dictionary of keyword arguments that
+   will be passed into the [78]numba.jit decorator. These keyword
+   arguments will be applied to both the passed function (if a standard
+   Python function) and the apply for loop over each window. Currently
+   only nogil, nopython, and parallel are supported, and their default
+   values are set to False, True and False respectively.
+
+   Note
+
+   In terms of performance, the first time a function is run using the
+   Numba engine will be slow as Numba will have some function compilation
+   overhead. However, the compiled functions are cached, and subsequent
+   calls will be fast. In general, the Numba engine is performant with a
+   larger amount of data points (e.g. 1+ million).
+In [1]: data = pd.Series(range(1_000_000))
+
+In [2]: roll = data.rolling(10)
+
+In [3]: def f(x):
+   ...:     return np.sum(x) + 5
+# Run the first time, compilation time will affect performance
+In [4]: %timeit -r 1 -n 1 roll.apply(f, engine='numba', raw=True)  # noqa: E225,
+ E999
+1.23 s ± 0 ns per loop (mean ± std. dev. of 1 run, 1 loop each)
+# Function is cached and performance will improve
+In [5]: %timeit roll.apply(f, engine='numba', raw=True)
+188 ms ± 1.93 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)
+
+In [6]: %timeit roll.apply(f, engine='cython', raw=True)
+3.92 s ± 59 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+
+Binary window functions[79]¶
+
+   cov() and corr() can compute moving window statistics about two
+   [80]Series or any combination of [81]DataFrame/[82]Series or
+   [83]DataFrame/[84]DataFrame. Here is the behavior in each case:
+     * two [85]Series: compute the statistic for the pairing.
+     * [86]DataFrame/[87]Series: compute the statistics for each column of
+       the DataFrame with the passed Series, thus returning a DataFrame.
+     * [88]DataFrame/[89]DataFrame: by default compute the statistic for
+       matching column names, returning a DataFrame. If the keyword
+       argument pairwise=True is passed then computes the statistic for
+       each pair of columns, returning a [90]DataFrame with a
+       [91]MultiIndex whose values are the dates in question (see [92]the
+       next section).
+
+   For example:
+In [60]: df = pd.DataFrame(
+   ....:     np.random.randn(10, 4),
+   ....:     index=pd.date_range("2020-01-01", periods=10),
+   ....:     columns=["A", "B", "C", "D"],
+   ....: )
+   ....:
+
+In [61]: df = df.cumsum()
+
+In [62]: df2 = df[:4]
+
+In [63]: df2.rolling(window=2).corr(df2["B"])
+Out[63]:
+              A    B    C    D
+2020-01-01  NaN  NaN  NaN  NaN
+2020-01-02 -1.0  1.0 -1.0  1.0
+2020-01-03  1.0  1.0  1.0 -1.0
+2020-01-04 -1.0  1.0  1.0 -1.0
+
+Computing rolling pairwise covariances and correlations[93]¶
+
+   In financial data analysis and other fields it’s common to compute
+   covariance and correlation matrices for a collection of time series.
+   Often one is also interested in moving-window covariance and
+   correlation matrices. This can be done by passing the pairwise keyword
+   argument, which in the case of [94]DataFrame inputs will yield a
+   MultiIndexed [95]DataFrame whose index are the dates in question. In
+   the case of a single DataFrame argument the pairwise argument can even
+   be omitted:
+
+   Note
+
+   Missing values are ignored and each entry is computed using the
+   pairwise complete observations. Please see the [96]covariance section
+   for [97]caveats associated with this method of calculating covariance
+   and correlation matrices.
+In [64]: covs = (
+   ....:     df[["B", "C", "D"]]
+   ....:     .rolling(window=4)
+   ....:     .cov(df[["A", "B", "C"]], pairwise=True)
+   ....: )
+   ....:
+
+In [65]: covs
+Out[65]:
+                     B         C         D
+2020-01-01 A       NaN       NaN       NaN
+           B       NaN       NaN       NaN
+           C       NaN       NaN       NaN
+2020-01-02 A       NaN       NaN       NaN
+           B       NaN       NaN       NaN
+...                ...       ...       ...
+2020-01-09 B  0.342006  0.230190  0.052849
+           C  0.230190  1.575251  0.082901
+2020-01-10 A -0.333945  0.006871 -0.655514
+           B  0.649711  0.430860  0.469271
+           C  0.430860  0.829721  0.055300
+
+[30 rows x 3 columns]
+
+Weighted window[98]¶
+
+   The win_type argument in .rolling generates a weighted windows that are
+   commonly used in filtering and spectral estimation. win_type must be
+   string that corresponds to a [99]scipy.signal window function. Scipy
+   must be installed in order to use these windows, and supplementary
+   arguments that the Scipy window methods take must be specified in the
+   aggregation function.
+In [66]: s = pd.Series(range(10))
+
+In [67]: s.rolling(window=5).mean()
+Out[67]:
+0    NaN
+1    NaN
+2    NaN
+3    NaN
+4    2.0
+5    3.0
+6    4.0
+7    5.0
+8    6.0
+9    7.0
+dtype: float64
+
+In [68]: s.rolling(window=5, win_type="triang").mean()
+Out[68]:
+0    NaN
+1    NaN
+2    NaN
+3    NaN
+4    2.0
+5    3.0
+6    4.0
+7    5.0
+8    6.0
+9    7.0
+dtype: float64
+
+# Supplementary Scipy arguments passed in the aggregation function
+In [69]: s.rolling(window=5, win_type="gaussian").mean(std=0.1)
+Out[69]:
+0    NaN
+1    NaN
+2    NaN
+3    NaN
+4    2.0
+5    3.0
+6    4.0
+7    5.0
+8    6.0
+9    7.0
+dtype: float64
+
+   For all supported aggregation functions, see [100]Weighted window
+   functions.
+
+Expanding window[101]¶
+
+   An expanding window yields the value of an aggregation statistic with
+   all the data available up to that point in time. Since these
+   calculations are a special case of rolling statistics, they are
+   implemented in pandas such that the following two calls are equivalent:
+In [70]: df = pd.DataFrame(range(5))
+
+In [71]: df.rolling(window=len(df), min_periods=1).mean()
+Out[71]:
+     0
+0  0.0
+1  0.5
+2  1.0
+3  1.5
+4  2.0
+
+In [72]: df.expanding(min_periods=1).mean()
+Out[72]:
+     0
+0  0.0
+1  0.5
+2  1.0
+3  1.5
+4  2.0
+
+   For all supported aggregation functions, see [102]Expanding window
+   functions.
+
+Exponentially Weighted window[103]¶
+
+   An exponentially weighted window is similar to an expanding window but
+   with each prior point being exponentially weighted down relative to the
+   current point.
+
+   In general, a weighted moving average is calculated as
+   \[y_t = \frac{\sum_{i=0}^t w_i x_{t-i}}{\sum_{i=0}^t w_i},\]
+
+   where \(x_t\) is the input, \(y_t\) is the result and the \(w_i\) are
+   the weights.
+
+   For all supported aggregation functions, see
+   [104]Exponentially-weighted window functions.
+
+   The EW functions support two variants of exponential weights. The
+   default, adjust=True, uses the weights \(w_i = (1 - \alpha)^i\) which
+   gives
+   \[y_t = \frac{x_t + (1 - \alpha)x_{t-1} + (1 - \alpha)^2 x_{t-2} + ...
+   + (1 - \alpha)^t x_{0}}{1 + (1 - \alpha) + (1 - \alpha)^2 + ... + (1 -
+   \alpha)^t}\]
+
+   When adjust=False is specified, moving averages are calculated as
+   \[\begin{split}y_0 &= x_0 \\ y_t &= (1 - \alpha) y_{t-1} + \alpha
+   x_t,\end{split}\]
+
+   which is equivalent to using weights
+   \[\begin{split}w_i = \begin{cases} \alpha (1 - \alpha)^i & \text{if } i
+   < t \\ (1 - \alpha)^i & \text{if } i = t. \end{cases}\end{split}\]
+
+   Note
+
+   These equations are sometimes written in terms of \(\alpha' = 1 -
+   \alpha\), e.g.
+   \[y_t = \alpha' y_{t-1} + (1 - \alpha') x_t.\]
+
+   The difference between the above two variants arises because we are
+   dealing with series which have finite history. Consider a series of
+   infinite history, with adjust=True:
+   \[y_t = \frac{x_t + (1 - \alpha)x_{t-1} + (1 - \alpha)^2 x_{t-2} + ...}
+   {1 + (1 - \alpha) + (1 - \alpha)^2 + ...}\]
+
+   Noting that the denominator is a geometric series with initial term
+   equal to 1 and a ratio of \(1 - \alpha\) we have
+   \[\begin{split}y_t &= \frac{x_t + (1 - \alpha)x_{t-1} + (1 - \alpha)^2
+   x_{t-2} + ...} {\frac{1}{1 - (1 - \alpha)}}\\ &= [x_t + (1 -
+   \alpha)x_{t-1} + (1 - \alpha)^2 x_{t-2} + ...] \alpha \\ &= \alpha x_t
+   + [(1-\alpha)x_{t-1} + (1 - \alpha)^2 x_{t-2} + ...]\alpha \\ &= \alpha
+   x_t + (1 - \alpha)[x_{t-1} + (1 - \alpha) x_{t-2} + ...]\alpha\\ &=
+   \alpha x_t + (1 - \alpha) y_{t-1}\end{split}\]
+
+   which is the same expression as adjust=False above and therefore shows
+   the equivalence of the two variants for infinite series. When
+   adjust=False, we have \(y_0 = x_0\) and \(y_t = \alpha x_t + (1 -
+   \alpha) y_{t-1}\). Therefore, there is an assumption that \(x_0\) is
+   not an ordinary value but rather an exponentially weighted moment of
+   the infinite series up to that point.
+
+   One must have \(0 < \alpha \leq 1\), and while it is possible to pass
+   \(\alpha\) directly, it’s often easier to think about either the span,
+   center of mass (com) or half-life of an EW moment:
+   \[\begin{split}\alpha = \begin{cases} \frac{2}{s + 1}, & \text{for
+   span}\ s \geq 1\\ \frac{1}{1 + c}, & \text{for center of mass}\ c \geq
+   0\\ 1 - \exp^{\frac{\log 0.5}{h}}, & \text{for half-life}\ h > 0
+   \end{cases}\end{split}\]
+
+   One must specify precisely one of span, center of mass, half-life and
+   alpha to the EW functions:
+     * Span corresponds to what is commonly called an “N-day EW moving
+       average”.
+     * Center of mass has a more physical interpretation and can be
+       thought of in terms of span: \(c = (s - 1) / 2\).
+     * Half-life is the period of time for the exponential weight to
+       reduce to one half.
+     * Alpha specifies the smoothing factor directly.
+
+   New in version 1.1.0.
+
+   You can also specify halflife in terms of a timedelta convertible unit
+   to specify the amount of time it takes for an observation to decay to
+   half its value when also specifying a sequence of times.
+In [73]: df = pd.DataFrame({"B": [0, 1, 2, np.nan, 4]})
+
+In [74]: df
+Out[74]:
+     B
+0  0.0
+1  1.0
+2  2.0
+3  NaN
+4  4.0
+
+In [75]: times = ["2020-01-01", "2020-01-03", "2020-01-10", "2020-01-15", "2020-
+01-17"]
+
+In [76]: df.ewm(halflife="4 days", times=pd.DatetimeIndex(times)).mean()
+Out[76]:
+          B
+0  0.000000
+1  0.585786
+2  1.523889
+3  1.523889
+4  3.233686
+
+   The following formula is used to compute exponentially weighted mean
+   with an input vector of times:
+   \[y_t = \frac{\sum_{i=0}^t 0.5^\frac{t_{t} - t_{i}}{\lambda}
+   x_{t-i}}{\sum_{i=0}^t 0.5^\frac{t_{t} - t_{i}}{\lambda}},\]
+
+   ExponentialMovingWindow also has an ignore_na argument, which
+   determines how intermediate null values affect the calculation of the
+   weights. When ignore_na=False (the default), weights are calculated
+   based on absolute positions, so that intermediate null values affect
+   the result. When ignore_na=True, weights are calculated by ignoring
+   intermediate null values. For example, assuming adjust=True, if
+   ignore_na=False, the weighted average of 3, NaN, 5 would be calculated
+   as
+   \[\frac{(1-\alpha)^2 \cdot 3 + 1 \cdot 5}{(1-\alpha)^2 + 1}.\]
+
+   Whereas if ignore_na=True, the weighted average would be calculated as
+   \[\frac{(1-\alpha) \cdot 3 + 1 \cdot 5}{(1-\alpha) + 1}.\]
+
+   The var(), std(), and cov() functions have a bias argument, specifying
+   whether the result should contain biased or unbiased statistics. For
+   example, if bias=True, ewmvar(x) is calculated as ewmvar(x) =
+   ewma(x**2) - ewma(x)**2; whereas if bias=False (the default), the
+   biased variance statistics are scaled by debiasing factors
+   \[\frac{\left(\sum_{i=0}^t w_i\right)^2}{\left(\sum_{i=0}^t
+   w_i\right)^2 - \sum_{i=0}^t w_i^2}.\]
+
+   (For \(w_i = 1\), this reduces to the usual \(N / (N - 1)\) factor,
+   with \(N = t + 1\).) See [105]Weighted Sample Variance on Wikipedia for
+   further details.
+   [106]Group by: split-apply-combine [107]Time series / date
+   functionality
+
+   © Copyright 2008-2021, the pandas development team.
+
+   Created using [108]Sphinx 3.5.4.
+
+References
+
+   1. https://pandas.pydata.org/pandas-docs/stable/genindex.html
+   2. https://pandas.pydata.org/pandas-docs/stable/search.html
+   3. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+   4. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
+   5. https://pandas.pydata.org/pandas-docs/stable/index.html
+   6. https://pandas.pydata.org/pandas-docs/stable/getting_started/index.html
+   7. https://pandas.pydata.org/pandas-docs/stable/user_guide/index.html
+   8. https://pandas.pydata.org/pandas-docs/stable/reference/index.html
+   9. https://pandas.pydata.org/pandas-docs/stable/development/index.html
+  10. https://pandas.pydata.org/pandas-docs/stable/whatsnew/index.html
+  11. https://github.com/pandas-dev/pandas
+  12. https://twitter.com/pandas_dev
+  13. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html
+  14. https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html
+  15. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html
+  16. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html
+  17. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html
+  18. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
+  19. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html
+  20. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html
+  21. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html
+  22. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+  23. https://pandas.pydata.org/pandas-docs/stable/user_guide/duplicates.html
+  24. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html
+  25. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html
+  26. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html
+  27. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html
+  28. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html
+  29. https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html
+  30. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
+  31. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html
+  32. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+  33. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html
+  34. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html
+  35. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html
+  36. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+  37. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html
+  38. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html
+  39. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html
+  40. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#overview
+  41. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#rolling-window
+  42. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#centering-windows
+  43. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#rolling-window-endpoints
+  44. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#custom-window-rolling
+  45. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#rolling-apply
+  46. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#numba-engine
+  47. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#binary-window-functions
+  48. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#computing-rolling-pairwise-covariances-and-correlations
+  49. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#weighted-window
+  50. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#expanding-window
+  51. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window
+  52. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#windowing-operations
+  53. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+  54. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  55. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#overview
+  56. https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+  57. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  58. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  59. https://en.wikipedia.org/wiki/Weighted_arithmetic_mean
+  60. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  61. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+  62. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  63. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+  64. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#rolling-window
+  65. https://pandas.pydata.org/pandas-docs/stable/reference/window.html#api-functions-rolling
+  66. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#centering-windows
+  67. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#rolling-window-endpoints
+  68. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#custom-window-rolling
+  69. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  70. https://github.com/pandas-dev/pandas/blob/master/pandas/core/window/indexers.py
+  71. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.api.indexers.FixedForwardWindowIndexer.html#pandas.api.indexers.FixedForwardWindowIndexer
+  72. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.api.indexers.BaseIndexer.html#pandas.api.indexers.BaseIndexer
+  73. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#rolling-apply
+  74. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+  75. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#numba-engine
+  76. https://numba.pydata.org/
+  77. https://numba.pydata.org/numba-doc/latest/user/overview.html
+  78. https://numba.pydata.org/numba-doc/latest/reference/jit-compilation.html#numba.jit
+  79. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#binary-window-functions
+  80. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+  81. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  82. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+  83. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  84. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  85. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+  86. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  87. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+  88. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  89. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  90. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  91. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.MultiIndex.html#pandas.MultiIndex
+  92. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#window-corr-pairwise
+  93. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#computing-rolling-pairwise-covariances-and-correlations
+  94. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  95. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  96. https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#computation-covariance
+  97. https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#computation-covariance-caveats
+  98. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#weighted-window
+  99. https://docs.scipy.org/doc/scipy/reference/signal.windows.html#module-scipy.signal.windows
+ 100. https://pandas.pydata.org/pandas-docs/stable/reference/window.html#api-functions-window
+ 101. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#expanding-window
+ 102. https://pandas.pydata.org/pandas-docs/stable/reference/window.html#api-functions-expanding
+ 103. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window
+ 104. https://pandas.pydata.org/pandas-docs/stable/reference/window.html#api-functions-ewm
+ 105. https://en.wikipedia.org/wiki/Weighted_arithmetic_mean#Weighted_sample_variance
+ 106. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
+ 107. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+ 108. http://sphinx-doc.org/

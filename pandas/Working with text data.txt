@@ -1,0 +1,1588 @@
+
+   #[1]Index [2]Search [3]Working with missing data [4]Reshaping and pivot
+   tables
+
+   [5]logo
+   (BUTTON)
+     * [6]Getting started
+     * [7]User Guide
+     * [8]API reference
+     * [9]Development
+     * [10]Release notes
+
+     * [11]GitHub
+     * [12]Twitter
+
+   ____________________
+
+     * [13]10 minutes to pandas
+     * [14]Intro to data structures
+     * [15]Essential basic functionality
+     * [16]IO tools (text, CSV, HDF5, …)
+     * [17]Indexing and selecting data
+     * [18]MultiIndex / advanced indexing
+     * [19]Merge, join, concatenate and compare
+     * [20]Reshaping and pivot tables
+     * [21]Working with text data
+     * [22]Working with missing data
+     * [23]Duplicate Labels
+     * [24]Categorical data
+     * [25]Nullable integer data type
+     * [26]Nullable Boolean data type
+     * [27]Chart Visualization
+     * [28]Table Visualization
+     * [29]Computational tools
+     * [30]Group by: split-apply-combine
+     * [31]Windowing Operations
+     * [32]Time series / date functionality
+     * [33]Time deltas
+     * [34]Options and settings
+     * [35]Enhancing performance
+     * [36]Scaling to large datasets
+     * [37]Sparse data structures
+     * [38]Frequently Asked Questions (FAQ)
+     * [39]Cookbook
+
+   On this page
+
+     * [40]Text data types
+          + [41]Behavior differences
+     * [42]String methods
+     * [43]Splitting and replacing strings
+     * [44]Concatenation
+          + [45]Concatenating a single Series into a string
+          + [46]Concatenating a Series and something list-like into a
+            Series
+          + [47]Concatenating a Series and something array-like into a
+            Series
+          + [48]Concatenating a Series and an indexed object into a
+            Series, with alignment
+          + [49]Concatenating a Series and many objects into a Series
+     * [50]Indexing with .str
+     * [51]Extracting substrings
+          + [52]Extract first match in each subject (extract)
+          + [53]Extract all matches in each subject (extractall)
+     * [54]Testing for strings that match or contain a pattern
+     * [55]Creating indicator variables
+     * [56]Method summary
+
+Working with text data[57]¶
+
+Text data types[58]¶
+
+   New in version 1.0.0.
+
+   There are two ways to store text data in pandas:
+    1. object -dtype NumPy array.
+    2. [59]StringDtype extension type.
+
+   We recommend using [60]StringDtype to store text data.
+
+   Prior to pandas 1.0, object dtype was the only option. This was
+   unfortunate for many reasons:
+    1. You can accidentally store a mixture of strings and non-strings in
+       an object dtype array. It’s better to have a dedicated dtype.
+    2. object dtype breaks dtype-specific operations like
+       [61]DataFrame.select_dtypes(). There isn’t a clear way to select
+       just text while excluding non-text but still object-dtype columns.
+    3. When reading code, the contents of an object dtype array is less
+       clear than 'string'.
+
+   Currently, the performance of object dtype arrays of strings and
+   [62]arrays.StringArray are about the same. We expect future
+   enhancements to significantly increase the performance and lower the
+   memory overhead of [63]StringArray.
+
+   Warning
+
+   StringArray is currently considered experimental. The implementation
+   and parts of the API may change without warning.
+
+   For backwards-compatibility, object dtype remains the default type we
+   infer a list of strings to
+In [1]: pd.Series(["a", "b", "c"])
+Out[1]:
+0    a
+1    b
+2    c
+dtype: object
+
+   To explicitly request string dtype, specify the dtype
+In [2]: pd.Series(["a", "b", "c"], dtype="string")
+Out[2]:
+0    a
+1    b
+2    c
+dtype: string
+
+In [3]: pd.Series(["a", "b", "c"], dtype=pd.StringDtype())
+Out[3]:
+0    a
+1    b
+2    c
+dtype: string
+
+   Or astype after the Series or DataFrame is created
+In [4]: s = pd.Series(["a", "b", "c"])
+
+In [5]: s
+Out[5]:
+0    a
+1    b
+2    c
+dtype: object
+
+In [6]: s.astype("string")
+Out[6]:
+0    a
+1    b
+2    c
+dtype: string
+
+   Changed in version 1.1.0.
+
+   You can also use [64]StringDtype/"string" as the dtype on non-string
+   data and it will be converted to string dtype:
+In [7]: s = pd.Series(["a", 2, np.nan], dtype="string")
+
+In [8]: s
+Out[8]:
+0       a
+1       2
+2    <NA>
+dtype: string
+
+In [9]: type(s[1])
+Out[9]: str
+
+   or convert from existing pandas data:
+In [10]: s1 = pd.Series([1, 2, np.nan], dtype="Int64")
+
+In [11]: s1
+Out[11]:
+0       1
+1       2
+2    <NA>
+dtype: Int64
+
+In [12]: s2 = s1.astype("string")
+
+In [13]: s2
+Out[13]:
+0       1
+1       2
+2    <NA>
+dtype: string
+
+In [14]: type(s2[0])
+Out[14]: str
+
+Behavior differences[65]¶
+
+   These are places where the behavior of StringDtype objects differ from
+   object dtype
+   12. For StringDtype, [66]string accessor methods that return numeric
+       output will always return a nullable integer dtype, rather than
+       either int or float dtype, depending on the presence of NA values.
+       Methods returning boolean output will return a nullable boolean
+       dtype.
+In [15]: s = pd.Series(["a", None, "b"], dtype="string")
+
+In [16]: s
+Out[16]:
+0       a
+1    <NA>
+2       b
+dtype: string
+
+In [17]: s.str.count("a")
+Out[17]:
+0       1
+1    <NA>
+2       0
+dtype: Int64
+
+In [18]: s.dropna().str.count("a")
+Out[18]:
+0    1
+2    0
+dtype: Int64
+
+       Both outputs are Int64 dtype. Compare that with object-dtype
+In [19]: s2 = pd.Series(["a", None, "b"], dtype="object")
+
+In [20]: s2.str.count("a")
+Out[20]:
+0    1.0
+1    NaN
+2    0.0
+dtype: float64
+
+In [21]: s2.dropna().str.count("a")
+Out[21]:
+0    1
+2    0
+dtype: int64
+
+       When NA values are present, the output dtype is float64. Similarly
+       for methods returning boolean values.
+In [22]: s.str.isdigit()
+Out[22]:
+0    False
+1     <NA>
+2    False
+dtype: boolean
+
+In [23]: s.str.match("a")
+Out[23]:
+0     True
+1     <NA>
+2    False
+dtype: boolean
+
+    2. Some string methods, like [67]Series.str.decode() are not available
+       on StringArray because StringArray only holds strings, not bytes.
+    3. In comparison operations, [68]arrays.StringArray and Series backed
+       by a StringArray will return an object with [69]BooleanDtype,
+       rather than a bool dtype object. Missing values in a StringArray
+       will propagate in comparison operations, rather than always
+       comparing unequal like numpy.nan.
+
+   Everything else that follows in the rest of this document applies
+   equally to string and object dtype.
+
+String methods[70]¶
+
+   Series and Index are equipped with a set of string processing methods
+   that make it easy to operate on each element of the array. Perhaps most
+   importantly, these methods exclude missing/NA values automatically.
+   These are accessed via the str attribute and generally have names
+   matching the equivalent (scalar) built-in string methods:
+In [24]: s = pd.Series(
+   ....:     ["A", "B", "C", "Aaba", "Baca", np.nan, "CABA", "dog", "cat"], dtyp
+e="string"
+   ....: )
+   ....:
+
+In [25]: s.str.lower()
+Out[25]:
+0       a
+1       b
+2       c
+3    aaba
+4    baca
+5    <NA>
+6    caba
+7     dog
+8     cat
+dtype: string
+
+In [26]: s.str.upper()
+Out[26]:
+0       A
+1       B
+2       C
+3    AABA
+4    BACA
+5    <NA>
+6    CABA
+7     DOG
+8     CAT
+dtype: string
+
+In [27]: s.str.len()
+Out[27]:
+0       1
+1       1
+2       1
+3       4
+4       4
+5    <NA>
+6       4
+7       3
+8       3
+dtype: Int64
+
+In [28]: idx = pd.Index([" jack", "jill ", " jesse ", "frank"])
+
+In [29]: idx.str.strip()
+Out[29]: Index(['jack', 'jill', 'jesse', 'frank'], dtype='object')
+
+In [30]: idx.str.lstrip()
+Out[30]: Index(['jack', 'jill ', 'jesse ', 'frank'], dtype='object')
+
+In [31]: idx.str.rstrip()
+Out[31]: Index([' jack', 'jill', ' jesse', 'frank'], dtype='object')
+
+   The string methods on Index are especially useful for cleaning up or
+   transforming DataFrame columns. For instance, you may have columns with
+   leading or trailing whitespace:
+In [32]: df = pd.DataFrame(
+   ....:     np.random.randn(3, 2), columns=[" Column A ", " Column B "], index=
+range(3)
+   ....: )
+   ....:
+
+In [33]: df
+Out[33]:
+    Column A    Column B
+0    0.469112   -0.282863
+1   -1.509059   -1.135632
+2    1.212112   -0.173215
+
+   Since df.columns is an Index object, we can use the .str accessor
+In [34]: df.columns.str.strip()
+Out[34]: Index(['Column A', 'Column B'], dtype='object')
+
+In [35]: df.columns.str.lower()
+Out[35]: Index([' column a ', ' column b '], dtype='object')
+
+   These string methods can then be used to clean up the columns as
+   needed. Here we are removing leading and trailing whitespaces, lower
+   casing all names, and replacing any remaining whitespaces with
+   underscores:
+In [36]: df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+
+In [37]: df
+Out[37]:
+   column_a  column_b
+0  0.469112 -0.282863
+1 -1.509059 -1.135632
+2  1.212112 -0.173215
+
+   Note
+
+   If you have a Series where lots of elements are repeated (i.e. the
+   number of unique elements in the Series is a lot smaller than the
+   length of the Series), it can be faster to convert the original Series
+   to one of type category and then use .str.<method> or .dt.<property> on
+   that. The performance difference comes from the fact that, for Series
+   of type category, the string operations are done on the .categories and
+   not on each element of the Series.
+
+   Please note that a Series of type category with string .categories has
+   some limitations in comparison to Series of type string (e.g. you can’t
+   add strings to each other: s + " " + s won’t work if s is a Series of
+   type category). Also, .str methods which operate on elements of type
+   list are not available on such a Series.
+
+   Warning
+
+   Before v.0.25.0, the .str-accessor did only the most rudimentary type
+   checks. Starting with v.0.25.0, the type of the Series is inferred and
+   the allowed types (i.e. strings) are enforced more rigorously.
+
+   Generally speaking, the .str accessor is intended to work only on
+   strings. With very few exceptions, other uses are not supported, and
+   may be disabled at a later point.
+
+Splitting and replacing strings[71]¶
+
+   Methods like split return a Series of lists:
+In [38]: s2 = pd.Series(["a_b_c", "c_d_e", np.nan, "f_g_h"], dtype="string")
+
+In [39]: s2.str.split("_")
+Out[39]:
+0    [a, b, c]
+1    [c, d, e]
+2         <NA>
+3    [f, g, h]
+dtype: object
+
+   Elements in the split lists can be accessed using get or [] notation:
+In [40]: s2.str.split("_").str.get(1)
+Out[40]:
+0       b
+1       d
+2    <NA>
+3       g
+dtype: object
+
+In [41]: s2.str.split("_").str[1]
+Out[41]:
+0       b
+1       d
+2    <NA>
+3       g
+dtype: object
+
+   It is easy to expand this to return a DataFrame using expand.
+In [42]: s2.str.split("_", expand=True)
+Out[42]:
+      0     1     2
+0     a     b     c
+1     c     d     e
+2  <NA>  <NA>  <NA>
+3     f     g     h
+
+   When original Series has [72]StringDtype, the output columns will all
+   be [73]StringDtype as well.
+
+   It is also possible to limit the number of splits:
+In [43]: s2.str.split("_", expand=True, n=1)
+Out[43]:
+      0     1
+0     a   b_c
+1     c   d_e
+2  <NA>  <NA>
+3     f   g_h
+
+   rsplit is similar to split except it works in the reverse direction,
+   i.e., from the end of the string to the beginning of the string:
+In [44]: s2.str.rsplit("_", expand=True, n=1)
+Out[44]:
+      0     1
+0   a_b     c
+1   c_d     e
+2  <NA>  <NA>
+3   f_g     h
+
+   replace optionally uses [74]regular expressions:
+In [45]: s3 = pd.Series(
+   ....:     ["A", "B", "C", "Aaba", "Baca", "", np.nan, "CABA", "dog", "cat"],
+   ....:     dtype="string",
+   ....: )
+   ....:
+
+In [46]: s3
+Out[46]:
+0       A
+1       B
+2       C
+3    Aaba
+4    Baca
+5
+6    <NA>
+7    CABA
+8     dog
+9     cat
+dtype: string
+
+In [47]: s3.str.replace("^.a|dog", "XX-XX ", case=False, regex=True)
+Out[47]:
+0           A
+1           B
+2           C
+3    XX-XX ba
+4    XX-XX ca
+5
+6        <NA>
+7    XX-XX BA
+8      XX-XX
+9     XX-XX t
+dtype: string
+
+   Warning
+
+   Some caution must be taken when dealing with regular expressions! The
+   current behavior is to treat single character patterns as literal
+   strings, even when regex is set to True. This behavior is deprecated
+   and will be removed in a future version so that the regex keyword is
+   always respected.
+
+   Changed in version 1.2.0.
+
+   If you want literal replacement of a string (equivalent to
+   [75]str.replace()), you can set the optional regex parameter to False,
+   rather than escaping each character. In this case both pat and repl
+   must be strings:
+In [48]: dollars = pd.Series(["12", "-$10", "$10,000"], dtype="string")
+
+# These lines are equivalent
+In [49]: dollars.str.replace(r"-\$", "-", regex=True)
+Out[49]:
+0         12
+1        -10
+2    $10,000
+dtype: string
+
+In [50]: dollars.str.replace("-$", "-", regex=False)
+Out[50]:
+0         12
+1        -10
+2    $10,000
+dtype: string
+
+   The replace method can also take a callable as replacement. It is
+   called on every pat using [76]re.sub(). The callable should expect one
+   positional argument (a regex object) and return a string.
+# Reverse every lowercase alphabetic word
+In [51]: pat = r"[a-z]+"
+
+In [52]: def repl(m):
+   ....:     return m.group(0)[::-1]
+   ....:
+
+In [53]: pd.Series(["foo 123", "bar baz", np.nan], dtype="string").str.replace(
+   ....:     pat, repl, regex=True
+   ....: )
+   ....:
+Out[53]:
+0    oof 123
+1    rab zab
+2       <NA>
+dtype: string
+
+# Using regex groups
+In [54]: pat = r"(?P<one>\w+) (?P<two>\w+) (?P<three>\w+)"
+
+In [55]: def repl(m):
+   ....:     return m.group("two").swapcase()
+   ....:
+
+In [56]: pd.Series(["Foo Bar Baz", np.nan], dtype="string").str.replace(
+   ....:     pat, repl, regex=True
+   ....: )
+   ....:
+Out[56]:
+0     bAR
+1    <NA>
+dtype: string
+
+   The replace method also accepts a compiled regular expression object
+   from [77]re.compile() as a pattern. All flags should be included in the
+   compiled regular expression object.
+In [57]: import re
+
+In [58]: regex_pat = re.compile(r"^.a|dog", flags=re.IGNORECASE)
+
+In [59]: s3.str.replace(regex_pat, "XX-XX ", regex=True)
+Out[59]:
+0           A
+1           B
+2           C
+3    XX-XX ba
+4    XX-XX ca
+5
+6        <NA>
+7    XX-XX BA
+8      XX-XX
+9     XX-XX t
+dtype: string
+
+   Including a flags argument when calling replace with a compiled regular
+   expression object will raise a ValueError.
+In [60]: s3.str.replace(regex_pat, 'XX-XX ', flags=re.IGNORECASE)
+---------------------------------------------------------------------------
+ValueError: case and flags cannot be set when pat is a compiled regex
+
+Concatenation[78]¶
+
+   There are several ways to concatenate a Series or Index, either with
+   itself or others, all based on [79]cat(), resp. Index.str.cat.
+
+Concatenating a single Series into a string[80]¶
+
+   The content of a Series (or Index) can be concatenated:
+In [61]: s = pd.Series(["a", "b", "c", "d"], dtype="string")
+
+In [62]: s.str.cat(sep=",")
+Out[62]: 'a,b,c,d'
+
+   If not specified, the keyword sep for the separator defaults to the
+   empty string, sep='':
+In [63]: s.str.cat()
+Out[63]: 'abcd'
+
+   By default, missing values are ignored. Using na_rep, they can be given
+   a representation:
+In [64]: t = pd.Series(["a", "b", np.nan, "d"], dtype="string")
+
+In [65]: t.str.cat(sep=",")
+Out[65]: 'a,b,d'
+
+In [66]: t.str.cat(sep=",", na_rep="-")
+Out[66]: 'a,b,-,d'
+
+Concatenating a Series and something list-like into a Series[81]¶
+
+   The first argument to [82]cat() can be a list-like object, provided
+   that it matches the length of the calling Series (or Index).
+In [67]: s.str.cat(["A", "B", "C", "D"])
+Out[67]:
+0    aA
+1    bB
+2    cC
+3    dD
+dtype: string
+
+   Missing values on either side will result in missing values in the
+   result as well, unless na_rep is specified:
+In [68]: s.str.cat(t)
+Out[68]:
+0      aa
+1      bb
+2    <NA>
+3      dd
+dtype: string
+
+In [69]: s.str.cat(t, na_rep="-")
+Out[69]:
+0    aa
+1    bb
+2    c-
+3    dd
+dtype: string
+
+Concatenating a Series and something array-like into a Series[83]¶
+
+   The parameter others can also be two-dimensional. In this case, the
+   number or rows must match the lengths of the calling Series (or Index).
+In [70]: d = pd.concat([t, s], axis=1)
+
+In [71]: s
+Out[71]:
+0    a
+1    b
+2    c
+3    d
+dtype: string
+
+In [72]: d
+Out[72]:
+      0  1
+0     a  a
+1     b  b
+2  <NA>  c
+3     d  d
+
+In [73]: s.str.cat(d, na_rep="-")
+Out[73]:
+0    aaa
+1    bbb
+2    c-c
+3    ddd
+dtype: string
+
+Concatenating a Series and an indexed object into a Series, with
+alignment[84]¶
+
+   For concatenation with a Series or DataFrame, it is possible to align
+   the indexes before concatenation by setting the join-keyword.
+In [74]: u = pd.Series(["b", "d", "a", "c"], index=[1, 3, 0, 2], dtype="string")
+
+In [75]: s
+Out[75]:
+0    a
+1    b
+2    c
+3    d
+dtype: string
+
+In [76]: u
+Out[76]:
+1    b
+3    d
+0    a
+2    c
+dtype: string
+
+In [77]: s.str.cat(u)
+Out[77]:
+0    aa
+1    bb
+2    cc
+3    dd
+dtype: string
+
+In [78]: s.str.cat(u, join="left")
+Out[78]:
+0    aa
+1    bb
+2    cc
+3    dd
+dtype: string
+
+   Warning
+
+   If the join keyword is not passed, the method [85]cat() will currently
+   fall back to the behavior before version 0.23.0 (i.e. no alignment),
+   but a FutureWarning will be raised if any of the involved indexes
+   differ, since this default will change to join='left' in a future
+   version.
+
+   The usual options are available for join (one of 'left', 'outer',
+   'inner', 'right'). In particular, alignment also means that the
+   different lengths do not need to coincide anymore.
+In [79]: v = pd.Series(["z", "a", "b", "d", "e"], index=[-1, 0, 1, 3, 4], dtype=
+"string")
+
+In [80]: s
+Out[80]:
+0    a
+1    b
+2    c
+3    d
+dtype: string
+
+In [81]: v
+Out[81]:
+-1    z
+ 0    a
+ 1    b
+ 3    d
+ 4    e
+dtype: string
+
+In [82]: s.str.cat(v, join="left", na_rep="-")
+Out[82]:
+0    aa
+1    bb
+2    c-
+3    dd
+dtype: string
+
+In [83]: s.str.cat(v, join="outer", na_rep="-")
+Out[83]:
+-1    -z
+ 0    aa
+ 1    bb
+ 2    c-
+ 3    dd
+ 4    -e
+dtype: string
+
+   The same alignment can be used when others is a DataFrame:
+In [84]: f = d.loc[[3, 2, 1, 0], :]
+
+In [85]: s
+Out[85]:
+0    a
+1    b
+2    c
+3    d
+dtype: string
+
+In [86]: f
+Out[86]:
+      0  1
+3     d  d
+2  <NA>  c
+1     b  b
+0     a  a
+
+In [87]: s.str.cat(f, join="left", na_rep="-")
+Out[87]:
+0    aaa
+1    bbb
+2    c-c
+3    ddd
+dtype: string
+
+Concatenating a Series and many objects into a Series[86]¶
+
+   Several array-like items (specifically: Series, Index, and
+   1-dimensional variants of np.ndarray) can be combined in a list-like
+   container (including iterators, dict-views, etc.).
+In [88]: s
+Out[88]:
+0    a
+1    b
+2    c
+3    d
+dtype: string
+
+In [89]: u
+Out[89]:
+1    b
+3    d
+0    a
+2    c
+dtype: string
+
+In [90]: s.str.cat([u, u.to_numpy()], join="left")
+Out[90]:
+0    aab
+1    bbd
+2    cca
+3    ddc
+dtype: string
+
+   All elements without an index (e.g. np.ndarray) within the passed
+   list-like must match in length to the calling Series (or Index), but
+   Series and Index may have arbitrary length (as long as alignment is not
+   disabled with join=None):
+In [91]: v
+Out[91]:
+-1    z
+ 0    a
+ 1    b
+ 3    d
+ 4    e
+dtype: string
+
+In [92]: s.str.cat([v, u, u.to_numpy()], join="outer", na_rep="-")
+Out[92]:
+-1    -z--
+ 0    aaab
+ 1    bbbd
+ 2    c-ca
+ 3    dddc
+ 4    -e--
+dtype: string
+
+   If using join='right' on a list-like of others that contains different
+   indexes, the union of these indexes will be used as the basis for the
+   final concatenation:
+In [93]: u.loc[[3]]
+Out[93]:
+3    d
+dtype: string
+
+In [94]: v.loc[[-1, 0]]
+Out[94]:
+-1    z
+ 0    a
+dtype: string
+
+In [95]: s.str.cat([u.loc[[3]], v.loc[[-1, 0]]], join="right", na_rep="-")
+Out[95]:
+-1    --z
+ 0    a-a
+ 3    dd-
+dtype: string
+
+Indexing with .str[87]¶
+
+   You can use [] notation to directly index by position locations. If you
+   index past the end of the string, the result will be a NaN.
+In [96]: s = pd.Series(
+   ....:     ["A", "B", "C", "Aaba", "Baca", np.nan, "CABA", "dog", "cat"], dtyp
+e="string"
+   ....: )
+   ....:
+
+In [97]: s.str[0]
+Out[97]:
+0       A
+1       B
+2       C
+3       A
+4       B
+5    <NA>
+6       C
+7       d
+8       c
+dtype: string
+
+In [98]: s.str[1]
+Out[98]:
+0    <NA>
+1    <NA>
+2    <NA>
+3       a
+4       a
+5    <NA>
+6       A
+7       o
+8       a
+dtype: string
+
+Extracting substrings[88]¶
+
+Extract first match in each subject (extract)[89]¶
+
+   Warning
+
+   Before version 0.23, argument expand of the extract method defaulted to
+   False. When expand=False, expand returns a Series, Index, or DataFrame,
+   depending on the subject and regular expression pattern. When
+   expand=True, it always returns a DataFrame, which is more consistent
+   and less confusing from the perspective of a user. expand=True has been
+   the default since version 0.23.0.
+
+   The extract method accepts a [90]regular expression with at least one
+   capture group.
+
+   Extracting a regular expression with more than one group returns a
+   DataFrame with one column per group.
+In [99]: pd.Series(
+   ....:     ["a1", "b2", "c3"],
+   ....:     dtype="string",
+   ....: ).str.extract(r"([ab])(\d)", expand=False)
+   ....:
+Out[99]:
+      0     1
+0     a     1
+1     b     2
+2  <NA>  <NA>
+
+   Elements that do not match return a row filled with NaN. Thus, a Series
+   of messy strings can be “converted” into a like-indexed Series or
+   DataFrame of cleaned-up or more useful strings, without necessitating
+   get() to access tuples or re.match objects. The dtype of the result is
+   always object, even if no match is found and the result only contains
+   NaN.
+
+   Named groups like
+In [100]: pd.Series(["a1", "b2", "c3"], dtype="string").str.extract(
+   .....:     r"(?P<letter>[ab])(?P<digit>\d)", expand=False
+   .....: )
+   .....:
+Out[100]:
+  letter digit
+0      a     1
+1      b     2
+2   <NA>  <NA>
+
+   and optional groups like
+In [101]: pd.Series(
+   .....:     ["a1", "b2", "3"],
+   .....:     dtype="string",
+   .....: ).str.extract(r"([ab])?(\d)", expand=False)
+   .....:
+Out[101]:
+      0  1
+0     a  1
+1     b  2
+2  <NA>  3
+
+   can also be used. Note that any capture group names in the regular
+   expression will be used for column names; otherwise capture group
+   numbers will be used.
+
+   Extracting a regular expression with one group returns a DataFrame with
+   one column if expand=True.
+In [102]: pd.Series(["a1", "b2", "c3"], dtype="string").str.extract(r"[ab](\d)",
+ expand=True)
+Out[102]:
+      0
+0     1
+1     2
+2  <NA>
+
+   It returns a Series if expand=False.
+In [103]: pd.Series(["a1", "b2", "c3"], dtype="string").str.extract(r"[ab](\d)",
+ expand=False)
+Out[103]:
+0       1
+1       2
+2    <NA>
+dtype: string
+
+   Calling on an Index with a regex with exactly one capture group returns
+   a DataFrame with one column if expand=True.
+In [104]: s = pd.Series(["a1", "b2", "c3"], ["A11", "B22", "C33"], dtype="string
+")
+
+In [105]: s
+Out[105]:
+A11    a1
+B22    b2
+C33    c3
+dtype: string
+
+In [106]: s.index.str.extract("(?P<letter>[a-zA-Z])", expand=True)
+Out[106]:
+  letter
+0      A
+1      B
+2      C
+
+   It returns an Index if expand=False.
+In [107]: s.index.str.extract("(?P<letter>[a-zA-Z])", expand=False)
+Out[107]: Index(['A', 'B', 'C'], dtype='object', name='letter')
+
+   Calling on an Index with a regex with more than one capture group
+   returns a DataFrame if expand=True.
+In [108]: s.index.str.extract("(?P<letter>[a-zA-Z])([0-9]+)", expand=True)
+Out[108]:
+  letter   1
+0      A  11
+1      B  22
+2      C  33
+
+   It raises ValueError if expand=False.
+>>> s.index.str.extract("(?P<letter>[a-zA-Z])([0-9]+)", expand=False)
+ValueError: only one regex group is supported with Index
+
+   The table below summarizes the behavior of extract(expand=False) (input
+   subject in first column, number of groups in regex in first row)
+
+   1 group
+
+   >1 group
+
+   Index
+
+   Index
+
+   ValueError
+
+   Series
+
+   Series
+
+   DataFrame
+
+Extract all matches in each subject (extractall)[91]¶
+
+   Unlike extract (which returns only the first match),
+In [109]: s = pd.Series(["a1a2", "b1", "c1"], index=["A", "B", "C"], dtype="stri
+ng")
+
+In [110]: s
+Out[110]:
+A    a1a2
+B      b1
+C      c1
+dtype: string
+
+In [111]: two_groups = "(?P<letter>[a-z])(?P<digit>[0-9])"
+
+In [112]: s.str.extract(two_groups, expand=True)
+Out[112]:
+  letter digit
+A      a     1
+B      b     1
+C      c     1
+
+   the extractall method returns every match. The result of extractall is
+   always a DataFrame with a MultiIndex on its rows. The last level of the
+   MultiIndex is named match and indicates the order in the subject.
+In [113]: s.str.extractall(two_groups)
+Out[113]:
+        letter digit
+  match
+A 0          a     1
+  1          a     2
+B 0          b     1
+C 0          c     1
+
+   When each subject string in the Series has exactly one match,
+In [114]: s = pd.Series(["a3", "b3", "c2"], dtype="string")
+
+In [115]: s
+Out[115]:
+0    a3
+1    b3
+2    c2
+dtype: string
+
+   then extractall(pat).xs(0, level='match') gives the same result as
+   extract(pat).
+In [116]: extract_result = s.str.extract(two_groups, expand=True)
+
+In [117]: extract_result
+Out[117]:
+  letter digit
+0      a     3
+1      b     3
+2      c     2
+
+In [118]: extractall_result = s.str.extractall(two_groups)
+
+In [119]: extractall_result
+Out[119]:
+        letter digit
+  match
+0 0          a     3
+1 0          b     3
+2 0          c     2
+
+In [120]: extractall_result.xs(0, level="match")
+Out[120]:
+  letter digit
+0      a     3
+1      b     3
+2      c     2
+
+   Index also supports .str.extractall. It returns a DataFrame which has
+   the same result as a Series.str.extractall with a default index (starts
+   from 0).
+In [121]: pd.Index(["a1a2", "b1", "c1"]).str.extractall(two_groups)
+Out[121]:
+        letter digit
+  match
+0 0          a     1
+  1          a     2
+1 0          b     1
+2 0          c     1
+
+In [122]: pd.Series(["a1a2", "b1", "c1"], dtype="string").str.extractall(two_gro
+ups)
+Out[122]:
+        letter digit
+  match
+0 0          a     1
+  1          a     2
+1 0          b     1
+2 0          c     1
+
+Testing for strings that match or contain a pattern[92]¶
+
+   You can check whether elements contain a pattern:
+In [123]: pattern = r"[0-9][a-z]"
+
+In [124]: pd.Series(
+   .....:     ["1", "2", "3a", "3b", "03c", "4dx"],
+   .....:     dtype="string",
+   .....: ).str.contains(pattern)
+   .....:
+Out[124]:
+0    False
+1    False
+2     True
+3     True
+4     True
+5     True
+dtype: boolean
+
+   Or whether elements match a pattern:
+In [125]: pd.Series(
+   .....:     ["1", "2", "3a", "3b", "03c", "4dx"],
+   .....:     dtype="string",
+   .....: ).str.match(pattern)
+   .....:
+Out[125]:
+0    False
+1    False
+2     True
+3     True
+4    False
+5     True
+dtype: boolean
+
+   New in version 1.1.0.
+In [126]: pd.Series(
+   .....:     ["1", "2", "3a", "3b", "03c", "4dx"],
+   .....:     dtype="string",
+   .....: ).str.fullmatch(pattern)
+   .....:
+Out[126]:
+0    False
+1    False
+2     True
+3     True
+4    False
+5    False
+dtype: boolean
+
+   Note
+
+   The distinction between match, fullmatch, and contains is strictness:
+   fullmatch tests whether the entire string matches the regular
+   expression; match tests whether there is a match of the regular
+   expression that begins at the first character of the string; and
+   contains tests whether there is a match of the regular expression at
+   any position within the string.
+
+   The corresponding functions in the re package for these three match
+   modes are [93]re.fullmatch, [94]re.match, and [95]re.search,
+   respectively.
+
+   Methods like match, fullmatch, contains, startswith, and endswith take
+   an extra na argument so missing values can be considered True or False:
+In [127]: s4 = pd.Series(
+   .....:     ["A", "B", "C", "Aaba", "Baca", np.nan, "CABA", "dog", "cat"], dty
+pe="string"
+   .....: )
+   .....:
+
+In [128]: s4.str.contains("A", na=False)
+Out[128]:
+0     True
+1    False
+2    False
+3     True
+4    False
+5    False
+6     True
+7    False
+8    False
+dtype: boolean
+
+Creating indicator variables[96]¶
+
+   You can extract dummy variables from string columns. For example if
+   they are separated by a '|':
+In [129]: s = pd.Series(["a", "a|b", np.nan, "a|c"], dtype="string")
+
+In [130]: s.str.get_dummies(sep="|")
+Out[130]:
+   a  b  c
+0  1  0  0
+1  1  1  0
+2  0  0  0
+3  1  0  1
+
+   String Index also supports get_dummies which returns a MultiIndex.
+In [131]: idx = pd.Index(["a", "a|b", np.nan, "a|c"])
+
+In [132]: idx.str.get_dummies(sep="|")
+Out[132]:
+MultiIndex([(1, 0, 0),
+            (1, 1, 0),
+            (0, 0, 0),
+            (1, 0, 1)],
+           names=['a', 'b', 'c'])
+
+   See also [97]get_dummies().
+
+Method summary[98]¶
+
+   Method
+
+   Description
+
+   [99]cat()
+
+   Concatenate strings
+
+   [100]split()
+
+   Split strings on delimiter
+
+   [101]rsplit()
+
+   Split strings on delimiter working from the end of the string
+
+   [102]get()
+
+   Index into each element (retrieve i-th element)
+
+   [103]join()
+
+   Join strings in each element of the Series with passed separator
+
+   [104]get_dummies()
+
+   Split strings on the delimiter returning DataFrame of dummy variables
+
+   [105]contains()
+
+   Return boolean array if each string contains pattern/regex
+
+   [106]replace()
+
+   Replace occurrences of pattern/regex/string with some other string or
+   the return value of a callable given the occurrence
+
+   [107]repeat()
+
+   Duplicate values (s.str.repeat(3) equivalent to x * 3)
+
+   [108]pad()
+
+   Add whitespace to left, right, or both sides of strings
+
+   [109]center()
+
+   Equivalent to str.center
+
+   [110]ljust()
+
+   Equivalent to str.ljust
+
+   [111]rjust()
+
+   Equivalent to str.rjust
+
+   [112]zfill()
+
+   Equivalent to str.zfill
+
+   [113]wrap()
+
+   Split long strings into lines with length less than a given width
+
+   [114]slice()
+
+   Slice each string in the Series
+
+   [115]slice_replace()
+
+   Replace slice in each string with passed value
+
+   [116]count()
+
+   Count occurrences of pattern
+
+   [117]startswith()
+
+   Equivalent to str.startswith(pat) for each element
+
+   [118]endswith()
+
+   Equivalent to str.endswith(pat) for each element
+
+   [119]findall()
+
+   Compute list of all occurrences of pattern/regex for each string
+
+   [120]match()
+
+   Call re.match on each element, returning matched groups as list
+
+   [121]extract()
+
+   Call re.search on each element, returning DataFrame with one row for
+   each element and one column for each regex capture group
+
+   [122]extractall()
+
+   Call re.findall on each element, returning DataFrame with one row for
+   each match and one column for each regex capture group
+
+   [123]len()
+
+   Compute string lengths
+
+   [124]strip()
+
+   Equivalent to str.strip
+
+   [125]rstrip()
+
+   Equivalent to str.rstrip
+
+   [126]lstrip()
+
+   Equivalent to str.lstrip
+
+   [127]partition()
+
+   Equivalent to str.partition
+
+   [128]rpartition()
+
+   Equivalent to str.rpartition
+
+   [129]lower()
+
+   Equivalent to str.lower
+
+   [130]casefold()
+
+   Equivalent to str.casefold
+
+   [131]upper()
+
+   Equivalent to str.upper
+
+   [132]find()
+
+   Equivalent to str.find
+
+   [133]rfind()
+
+   Equivalent to str.rfind
+
+   [134]index()
+
+   Equivalent to str.index
+
+   [135]rindex()
+
+   Equivalent to str.rindex
+
+   [136]capitalize()
+
+   Equivalent to str.capitalize
+
+   [137]swapcase()
+
+   Equivalent to str.swapcase
+
+   [138]normalize()
+
+   Return Unicode normal form. Equivalent to unicodedata.normalize
+
+   [139]translate()
+
+   Equivalent to str.translate
+
+   [140]isalnum()
+
+   Equivalent to str.isalnum
+
+   [141]isalpha()
+
+   Equivalent to str.isalpha
+
+   [142]isdigit()
+
+   Equivalent to str.isdigit
+
+   [143]isspace()
+
+   Equivalent to str.isspace
+
+   [144]islower()
+
+   Equivalent to str.islower
+
+   [145]isupper()
+
+   Equivalent to str.isupper
+
+   [146]istitle()
+
+   Equivalent to str.istitle
+
+   [147]isnumeric()
+
+   Equivalent to str.isnumeric
+
+   [148]isdecimal()
+
+   Equivalent to str.isdecimal
+   [149]Reshaping and pivot tables [150]Working with missing data
+
+   © Copyright 2008-2021, the pandas development team.
+
+   Created using [151]Sphinx 3.5.4.
+
+References
+
+   1. https://pandas.pydata.org/pandas-docs/stable/genindex.html
+   2. https://pandas.pydata.org/pandas-docs/stable/search.html
+   3. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+   4. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html
+   5. https://pandas.pydata.org/pandas-docs/stable/index.html
+   6. https://pandas.pydata.org/pandas-docs/stable/getting_started/index.html
+   7. https://pandas.pydata.org/pandas-docs/stable/user_guide/index.html
+   8. https://pandas.pydata.org/pandas-docs/stable/reference/index.html
+   9. https://pandas.pydata.org/pandas-docs/stable/development/index.html
+  10. https://pandas.pydata.org/pandas-docs/stable/whatsnew/index.html
+  11. https://github.com/pandas-dev/pandas
+  12. https://twitter.com/pandas_dev
+  13. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html
+  14. https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html
+  15. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html
+  16. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html
+  17. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html
+  18. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
+  19. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html
+  20. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html
+  21. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html
+  22. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+  23. https://pandas.pydata.org/pandas-docs/stable/user_guide/duplicates.html
+  24. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html
+  25. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html
+  26. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html
+  27. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html
+  28. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html
+  29. https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html
+  30. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
+  31. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html
+  32. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+  33. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html
+  34. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html
+  35. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html
+  36. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+  37. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html
+  38. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html
+  39. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html
+  40. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#text-data-types
+  41. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#behavior-differences
+  42. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#string-methods
+  43. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#splitting-and-replacing-strings
+  44. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenation
+  45. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-single-series-into-a-string
+  46. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-series-and-something-list-like-into-a-series
+  47. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-series-and-something-array-like-into-a-series
+  48. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-series-and-an-indexed-object-into-a-series-with-alignment
+  49. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-series-and-many-objects-into-a-series
+  50. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#indexing-with-str
+  51. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#extracting-substrings
+  52. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#extract-first-match-in-each-subject-extract
+  53. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#extract-all-matches-in-each-subject-extractall
+  54. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#testing-for-strings-that-match-or-contain-a-pattern
+  55. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#creating-indicator-variables
+  56. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#method-summary
+  57. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#working-with-text-data
+  58. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#text-data-types
+  59. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.StringDtype.html#pandas.StringDtype
+  60. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.StringDtype.html#pandas.StringDtype
+  61. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.select_dtypes.html#pandas.DataFrame.select_dtypes
+  62. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.arrays.StringArray.html#pandas.arrays.StringArray
+  63. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.arrays.StringArray.html#pandas.arrays.StringArray
+  64. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.StringDtype.html#pandas.StringDtype
+  65. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#behavior-differences
+  66. https://pandas.pydata.org/pandas-docs/stable/reference/series.html#api-series-str
+  67. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.decode.html#pandas.Series.str.decode
+  68. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.arrays.StringArray.html#pandas.arrays.StringArray
+  69. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.BooleanDtype.html#pandas.BooleanDtype
+  70. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#string-methods
+  71. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#splitting-and-replacing-strings
+  72. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.StringDtype.html#pandas.StringDtype
+  73. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.StringDtype.html#pandas.StringDtype
+  74. https://docs.python.org/3/library/re.html
+  75. https://docs.python.org/3/library/stdtypes.html#str.replace
+  76. https://docs.python.org/3/library/re.html#re.sub
+  77. https://docs.python.org/3/library/re.html#re.compile
+  78. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenation
+  79. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.cat.html#pandas.Series.str.cat
+  80. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-single-series-into-a-string
+  81. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-series-and-something-list-like-into-a-series
+  82. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.cat.html#pandas.Series.str.cat
+  83. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-series-and-something-array-like-into-a-series
+  84. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-series-and-an-indexed-object-into-a-series-with-alignment
+  85. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.cat.html#pandas.Series.str.cat
+  86. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenating-a-series-and-many-objects-into-a-series
+  87. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#indexing-with-str
+  88. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#extracting-substrings
+  89. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#extract-first-match-in-each-subject-extract
+  90. https://docs.python.org/3/library/re.html
+  91. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#extract-all-matches-in-each-subject-extractall
+  92. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#testing-for-strings-that-match-or-contain-a-pattern
+  93. https://docs.python.org/3/library/re.html#re.fullmatch
+  94. https://docs.python.org/3/library/re.html#re.match
+  95. https://docs.python.org/3/library/re.html#re.search
+  96. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#creating-indicator-variables
+  97. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.get_dummies.html#pandas.get_dummies
+  98. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#method-summary
+  99. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.cat.html#pandas.Series.str.cat
+ 100. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.split.html#pandas.Series.str.split
+ 101. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.rsplit.html#pandas.Series.str.rsplit
+ 102. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.get.html#pandas.Series.str.get
+ 103. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.join.html#pandas.Series.str.join
+ 104. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.get_dummies.html#pandas.Series.str.get_dummies
+ 105. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.contains.html#pandas.Series.str.contains
+ 106. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.replace.html#pandas.Series.str.replace
+ 107. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.repeat.html#pandas.Series.str.repeat
+ 108. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.pad.html#pandas.Series.str.pad
+ 109. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.center.html#pandas.Series.str.center
+ 110. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.ljust.html#pandas.Series.str.ljust
+ 111. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.rjust.html#pandas.Series.str.rjust
+ 112. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.zfill.html#pandas.Series.str.zfill
+ 113. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.wrap.html#pandas.Series.str.wrap
+ 114. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.slice.html#pandas.Series.str.slice
+ 115. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.slice_replace.html#pandas.Series.str.slice_replace
+ 116. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.count.html#pandas.Series.str.count
+ 117. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.startswith.html#pandas.Series.str.startswith
+ 118. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.endswith.html#pandas.Series.str.endswith
+ 119. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.findall.html#pandas.Series.str.findall
+ 120. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.match.html#pandas.Series.str.match
+ 121. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.extract.html#pandas.Series.str.extract
+ 122. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.extractall.html#pandas.Series.str.extractall
+ 123. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.len.html#pandas.Series.str.len
+ 124. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.strip.html#pandas.Series.str.strip
+ 125. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.rstrip.html#pandas.Series.str.rstrip
+ 126. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.lstrip.html#pandas.Series.str.lstrip
+ 127. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.partition.html#pandas.Series.str.partition
+ 128. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.rpartition.html#pandas.Series.str.rpartition
+ 129. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.lower.html#pandas.Series.str.lower
+ 130. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.casefold.html#pandas.Series.str.casefold
+ 131. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.upper.html#pandas.Series.str.upper
+ 132. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.find.html#pandas.Series.str.find
+ 133. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.rfind.html#pandas.Series.str.rfind
+ 134. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.index.html#pandas.Series.str.index
+ 135. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.rindex.html#pandas.Series.str.rindex
+ 136. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.capitalize.html#pandas.Series.str.capitalize
+ 137. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.swapcase.html#pandas.Series.str.swapcase
+ 138. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.normalize.html#pandas.Series.str.normalize
+ 139. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.translate.html#pandas.Series.str.translate
+ 140. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.isalnum.html#pandas.Series.str.isalnum
+ 141. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.isalpha.html#pandas.Series.str.isalpha
+ 142. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.isdigit.html#pandas.Series.str.isdigit
+ 143. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.isspace.html#pandas.Series.str.isspace
+ 144. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.islower.html#pandas.Series.str.islower
+ 145. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.isupper.html#pandas.Series.str.isupper
+ 146. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.istitle.html#pandas.Series.str.istitle
+ 147. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.isnumeric.html#pandas.Series.str.isnumeric
+ 148. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.str.isdecimal.html#pandas.Series.str.isdecimal
+ 149. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html
+ 150. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+ 151. http://sphinx-doc.org/

@@ -1,0 +1,623 @@
+   #[1]Index [2]Search [3]10 minutes to pandas [4]Community tutorials
+
+   [5]logo
+   (BUTTON)
+     * [6]Getting started
+     * [7]User Guide
+     * [8]API reference
+     * [9]Development
+     * [10]Release notes
+
+     * [11]GitHub
+     * [12]Twitter
+
+   ____________________
+
+     * [13][[10 minutes to pandas]]
+     * [14][[Intro to data structures]]
+     * [15][[Essential basic functionality]]
+     * [16][[IO tools]] (text, CSV, HDF5, …)
+     * [17][[Indexing and selecting data]]
+     * [18][[MultiIndex advanced indexing]]
+     * [19][[Merge, join, concatenate and compare]]
+     * [20][[Reshaping and pivot tables]]
+     * [21][[Working with text data]]
+     * [22][[Working with missing data]]
+     * [23][[Duplicate Labels]]
+     * [24][[Categorical data]]
+     * [25][[Nullable integer data type]]
+     * [26][[Nullable Boolean data type]]
+     * [27][[Visualization]]
+     * [28][[Computational tools]]
+     * [29][[Group by: split-apply-combine]]
+     * [30][[Windowing Operations]]
+     * [31][[Time series]] / date functionality
+     * [32][[Time deltas]]
+     * [33][[Styling]]
+     * [34][[Options and settings]]
+     * [35][[Enhancing performance]]
+     * [36][[Scaling to large datasets]]
+     * [37][[Sparse data structures]]
+     * [38]Frequently Asked Questions (FAQ)
+     * [39]Cookbook
+
+User Guide[40]¶
+
+   The User Guide covers all of pandas by topic area. Each of the
+   subsections introduces a topic (such as “working with missing data”),
+   and discusses how pandas approaches the problem, with many examples
+   throughout.
+
+   Users brand-new to pandas should start with [41]10 minutes to pandas.
+
+   For a high level summary of the pandas fundamentals, see [42]Intro to
+   data structures and [43]Essential basic functionality.
+
+   Further information on any specific method can be obtained in the
+   [44]API reference.
+     * [45][[10 minutes to pandas]]
+          + [46]Object creation
+          + [47]Viewing data
+          + [48]Selection
+          + [49]Missing data
+          + [50]Operations
+          + [51]Merge
+          + [52]Grouping
+          + [53]Reshaping
+          + [54]Time series
+          + [55]Categoricals
+          + [56]Plotting
+          + [57]Getting data in/out
+          + [58]Gotchas
+     * [59]Intro to data structures
+          + [60]Series
+          + [61]DataFrame
+     * [62]Essential basic functionality
+          + [63]Head and tail
+          + [64]Attributes and underlying data
+          + [65]Accelerated operations
+          + [66]Flexible binary operations
+          + [67]Descriptive statistics
+          + [68]Function application
+          + [69]Reindexing and altering labels
+          + [70]Iteration
+          + [71].dt accessor
+          + [72]Vectorized string methods
+          + [73]Sorting
+          + [74]Copying
+          + [75]dtypes
+          + [76]Selecting columns based on dtype
+     * [77]IO tools (text, CSV, HDF5, …)
+          + [78]CSV & text files
+          + [79]JSON
+          + [80]HTML
+          + [81]Excel files
+          + [82]OpenDocument Spreadsheets
+          + [83]Binary Excel (.xlsb) files
+          + [84]Clipboard
+          + [85]Pickling
+          + [86]msgpack
+          + [87]HDF5 (PyTables)
+          + [88]Feather
+          + [89]Parquet
+          + [90]ORC
+          + [91]SQL queries
+          + [92]Google BigQuery
+          + [93]Stata format
+          + [94]SAS formats
+          + [95]SPSS formats
+          + [96]Other file formats
+          + [97]Performance considerations
+     * [98]Indexing and selecting data
+          + [99]Different choices for indexing
+          + [100]Basics
+          + [101]Attribute access
+          + [102]Slicing ranges
+          + [103]Selection by label
+          + [104]Selection by position
+          + [105]Selection by callable
+          + [106]Combining positional and label-based indexing
+          + [107]Indexing with list with missing labels is deprecated
+          + [108]Selecting random samples
+          + [109]Setting with enlargement
+          + [110]Fast scalar value getting and setting
+          + [111]Boolean indexing
+          + [112]Indexing with isin
+          + [113]The where() Method and Masking
+          + [114]Setting with enlargement conditionally using numpy()
+          + [115]The query() Method
+          + [116]Duplicate data
+          + [117]Dictionary-like get() method
+          + [118]Looking up values by index/column labels
+          + [119]Index objects
+          + [120]Set / reset index
+          + [121]Returning a view versus a copy
+     * [122]MultiIndex / advanced indexing
+          + [123]Hierarchical indexing (MultiIndex)
+          + [124]Advanced indexing with hierarchical index
+          + [125]Sorting a MultiIndex
+          + [126]Take methods
+          + [127]Index types
+          + [128]Miscellaneous indexing FAQ
+     * [129]Merge, join, concatenate and compare
+          + [130]Concatenating objects
+          + [131]Database-style DataFrame or named Series joining/merging
+          + [132]Timeseries friendly merging
+          + [133]Comparing objects
+     * [134]Reshaping and pivot tables
+          + [135]Reshaping by pivoting DataFrame objects
+          + [136]Reshaping by stacking and unstacking
+          + [137]Reshaping by melt
+          + [138]Combining with stats and GroupBy
+          + [139]Pivot tables
+          + [140]Cross tabulations
+          + [141]Tiling
+          + [142]Computing indicator / dummy variables
+          + [143]Factorizing values
+          + [144]Examples
+          + [145]Exploding a list-like column
+     * [146]Working with text data
+          + [147]Text data types
+          + [148]String methods
+          + [149]Splitting and replacing strings
+          + [150]Concatenation
+          + [151]Indexing with .str
+          + [152]Extracting substrings
+          + [153]Testing for strings that match or contain a pattern
+          + [154]Creating indicator variables
+          + [155]Method summary
+     * [156]Working with missing data
+          + [157]Values considered “missing”
+          + [158]Inserting missing data
+          + [159]Calculations with missing data
+          + [160]Sum/prod of empties/nans
+          + [161]NA values in GroupBy
+          + [162]Filling missing values: fillna
+          + [163]Filling with a PandasObject
+          + [164]Dropping axis labels with missing data: dropna
+          + [165]Interpolation
+          + [166]Replacing generic values
+          + [167]String/regular expression replacement
+          + [168]Numeric replacement
+          + [169]Experimental NA scalar to denote missing values
+     * [170]Duplicate Labels
+          + [171]Consequences of Duplicate Labels
+          + [172]Duplicate Label Detection
+          + [173]Disallowing Duplicate Labels
+     * [174]Categorical data
+          + [175]Object creation
+          + [176]CategoricalDtype
+          + [177]Description
+          + [178]Working with categories
+          + [179]Sorting and order
+          + [180]Comparisons
+          + [181]Operations
+          + [182]Data munging
+          + [183]Getting data in/out
+          + [184]Missing data
+          + [185]Differences to R’s factor
+          + [186]Gotchas
+     * [187]Nullable integer data type
+          + [188]Construction
+          + [189]Operations
+          + [190]Scalar NA Value
+     * [191]Nullable Boolean data type
+          + [192]Indexing with NA values
+          + [193]Kleene logical operations
+     * [194]Visualization
+          + [195]Basic plotting: plot
+          + [196]Other plots
+          + [197]Plotting with missing data
+          + [198]Plotting tools
+          + [199]Plot formatting
+          + [200]Plotting directly with matplotlib
+          + [201]Plotting backends
+     * [202]Computational tools
+          + [203]Statistical functions
+     * [204]Group by: split-apply-combine
+          + [205]Splitting an object into groups
+          + [206]Iterating through groups
+          + [207]Selecting a group
+          + [208]Aggregation
+          + [209]Transformation
+          + [210]Filtration
+          + [211]Dispatching to instance methods
+          + [212]Flexible apply
+          + [213]Numba Accelerated Routines
+          + [214]Other useful features
+          + [215]Examples
+     * [216]Windowing Operations
+          + [217]Overview
+          + [218]Rolling window
+          + [219]Weighted window
+          + [220]Expanding window
+          + [221]Exponentially Weighted window
+     * [222]Time series / date functionality
+          + [223]Overview
+          + [224]Timestamps vs. time spans
+          + [225]Converting to timestamps
+          + [226]Generating ranges of timestamps
+          + [227]Timestamp limitations
+          + [228]Indexing
+          + [229]Time/date components
+          + [230]DateOffset objects
+          + [231]Time series-related instance methods
+          + [232]Resampling
+          + [233]Time span representation
+          + [234]Converting between representations
+          + [235]Representing out-of-bounds spans
+          + [236]Time zone handling
+     * [237]Time deltas
+          + [238]Parsing
+          + [239]Operations
+          + [240]Reductions
+          + [241]Frequency conversion
+          + [242]Attributes
+          + [243]TimedeltaIndex
+          + [244]Resampling
+     * [245]Styling
+          + [246]Building styles
+          + [247]Finer control: slicing
+          + [248]Finer Control: Display Values
+          + [249]Builtin styles
+          + [250]Sharing styles
+          + [251]Other Options
+          + [252]Fun stuff
+          + [253]Export to Excel
+          + [254]Extensibility
+     * [255]Options and settings
+          + [256]Overview
+          + [257]Getting and setting options
+          + [258]Setting startup options in Python/IPython environment
+          + [259]Frequently used options
+          + [260]Available options
+          + [261]Number formatting
+          + [262]Unicode formatting
+          + [263]Table schema display
+     * [264]Enhancing performance
+          + [265]Cython (writing C extensions for pandas)
+          + [266]Using Numba
+          + [267]Expression evaluation via eval()
+     * [268]Scaling to large datasets
+          + [269]Load less data
+          + [270]Use efficient datatypes
+          + [271]Use chunking
+          + [272]Use other libraries
+     * [273]Sparse data structures
+          + [274]SparseArray
+          + [275]SparseDtype
+          + [276]Sparse accessor
+          + [277]Sparse calculation
+          + [278]Migrating
+          + [279]Interaction with scipy.sparse
+     * [280]Frequently Asked Questions (FAQ)
+          + [281]DataFrame memory usage
+          + [282]Using if/truth statements with pandas
+          + [283]NaN, Integer NA values and NA type promotions
+          + [284]Differences with NumPy
+          + [285]Thread-safety
+          + [286]Byte-ordering issues
+     * [287]Cookbook
+          + [288]Idioms
+          + [289]Selection
+          + [290]Multiindexing
+          + [291]Missing data
+          + [292]Grouping
+          + [293]Timeseries
+          + [294]Merge
+          + [295]Plotting
+          + [296]Data in/out
+          + [297]Computation
+          + [298]Timedeltas
+          + [299]Creating example data
+
+   [300]Community tutorials [301]10 minutes to pandas
+
+   © Copyright 2008-2021, the pandas development team.
+
+   Created using [302]Sphinx 4.0.2.
+
+References
+
+   1. https://pandas.pydata.org/pandas-docs/stable/genindex.html
+   2. https://pandas.pydata.org/pandas-docs/stable/search.html
+   3. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html
+   4. https://pandas.pydata.org/pandas-docs/stable/getting_started/tutorials.html
+   5. https://pandas.pydata.org/pandas-docs/stable/index.html
+   6. https://pandas.pydata.org/pandas-docs/stable/getting_started/index.html
+   7. https://pandas.pydata.org/pandas-docs/stable/user_guide/index.html
+   8. https://pandas.pydata.org/pandas-docs/stable/reference/index.html
+   9. https://pandas.pydata.org/pandas-docs/stable/development/index.html
+  10. https://pandas.pydata.org/pandas-docs/stable/whatsnew/index.html
+  11. https://github.com/pandas-dev/pandas
+  12. https://twitter.com/pandas_dev
+  13. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html
+  14. https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html
+  15. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html
+  16. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html
+  17. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html
+  18. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
+  19. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html
+  20. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html
+  21. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html
+  22. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+  23. https://pandas.pydata.org/pandas-docs/stable/user_guide/duplicates.html
+  24. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html
+  25. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html
+  26. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html
+  27. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html
+  28. https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html
+  29. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
+  30. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html
+  31. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+  32. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html
+  33. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html
+  34. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html
+  35. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html
+  36. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+  37. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html
+  38. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html
+  39. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html
+  40. https://pandas.pydata.org/pandas-docs/stable/user_guide/index.html#user-guide
+  41. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#min
+  42. https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html#dsintro
+  43. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#basics
+  44. https://pandas.pydata.org/pandas-docs/stable/reference/index.html#api
+  45. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html
+  46. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#object-creation
+  47. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#viewing-data
+  48. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#selection
+  49. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#missing-data
+  50. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#operations
+  51. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#merge
+  52. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#grouping
+  53. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#reshaping
+  54. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#time-series
+  55. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#categoricals
+  56. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#plotting
+  57. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#getting-data-in-out
+  58. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html#gotchas
+  59. https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html
+  60. https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html#series
+  61. https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html#dataframe
+  62. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html
+  63. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#head-and-tail
+  64. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#attributes-and-underlying-data
+  65. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#accelerated-operations
+  66. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#flexible-binary-operations
+  67. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#descriptive-statistics
+  68. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#function-application
+  69. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#reindexing-and-altering-labels
+  70. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#iteration
+  71. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#dt-accessor
+  72. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#vectorized-string-methods
+  73. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#sorting
+  74. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#copying
+  75. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#dtypes
+  76. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html#selecting-columns-based-on-dtype
+  77. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html
+  78. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#csv-text-files
+  79. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#json
+  80. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#html
+  81. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#excel-files
+  82. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#opendocument-spreadsheets
+  83. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#binary-excel-xlsb-files
+  84. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#clipboard
+  85. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#pickling
+  86. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#msgpack
+  87. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#hdf5-pytables
+  88. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#feather
+  89. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#parquet
+  90. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#orc
+  91. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#sql-queries
+  92. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#google-bigquery
+  93. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#stata-format
+  94. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#sas-formats
+  95. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#spss-formats
+  96. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#other-file-formats
+  97. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#performance-considerations
+  98. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html
+  99. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#different-choices-for-indexing
+ 100. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#basics
+ 101. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#attribute-access
+ 102. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#slicing-ranges
+ 103. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-label
+ 104. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-position
+ 105. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selection-by-callable
+ 106. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#combining-positional-and-label-based-indexing
+ 107. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#indexing-with-list-with-missing-labels-is-deprecated
+ 108. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#selecting-random-samples
+ 109. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#setting-with-enlargement
+ 110. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#fast-scalar-value-getting-and-setting
+ 111. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#boolean-indexing
+ 112. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#indexing-with-isin
+ 113. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#the-where-method-and-masking
+ 114. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#setting-with-enlargement-conditionally-using-numpy
+ 115. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#the-query-method
+ 116. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#duplicate-data
+ 117. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#dictionary-like-get-method
+ 118. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#looking-up-values-by-index-column-labels
+ 119. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#index-objects
+ 120. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#set-reset-index
+ 121. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+ 122. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
+ 123. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#hierarchical-indexing-multiindex
+ 124. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#advanced-indexing-with-hierarchical-index
+ 125. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#sorting-a-multiindex
+ 126. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#take-methods
+ 127. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#index-types
+ 128. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html#miscellaneous-indexing-faq
+ 129. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html
+ 130. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html#concatenating-objects
+ 131. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html#database-style-dataframe-or-named-series-joining-merging
+ 132. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html#timeseries-friendly-merging
+ 133. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html#comparing-objects
+ 134. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html
+ 135. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#reshaping-by-pivoting-dataframe-objects
+ 136. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#reshaping-by-stacking-and-unstacking
+ 137. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#reshaping-by-melt
+ 138. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#combining-with-stats-and-groupby
+ 139. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#pivot-tables
+ 140. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#cross-tabulations
+ 141. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#tiling
+ 142. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#computing-indicator-dummy-variables
+ 143. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#factorizing-values
+ 144. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#examples
+ 145. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html#exploding-a-list-like-column
+ 146. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html
+ 147. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#text-data-types
+ 148. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#string-methods
+ 149. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#splitting-and-replacing-strings
+ 150. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#concatenation
+ 151. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#indexing-with-str
+ 152. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#extracting-substrings
+ 153. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#testing-for-strings-that-match-or-contain-a-pattern
+ 154. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#creating-indicator-variables
+ 155. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html#method-summary
+ 156. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+ 157. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#values-considered-missing
+ 158. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#inserting-missing-data
+ 159. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#calculations-with-missing-data
+ 160. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#sum-prod-of-empties-nans
+ 161. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#na-values-in-groupby
+ 162. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#filling-missing-values-fillna
+ 163. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#filling-with-a-pandasobject
+ 164. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#dropping-axis-labels-with-missing-data-dropna
+ 165. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#interpolation
+ 166. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#replacing-generic-values
+ 167. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#string-regular-expression-replacement
+ 168. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#numeric-replacement
+ 169. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#experimental-na-scalar-to-denote-missing-values
+ 170. https://pandas.pydata.org/pandas-docs/stable/user_guide/duplicates.html
+ 171. https://pandas.pydata.org/pandas-docs/stable/user_guide/duplicates.html#consequences-of-duplicate-labels
+ 172. https://pandas.pydata.org/pandas-docs/stable/user_guide/duplicates.html#duplicate-label-detection
+ 173. https://pandas.pydata.org/pandas-docs/stable/user_guide/duplicates.html#disallowing-duplicate-labels
+ 174. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html
+ 175. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#object-creation
+ 176. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#categoricaldtype
+ 177. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#description
+ 178. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#working-with-categories
+ 179. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#sorting-and-order
+ 180. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#comparisons
+ 181. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#operations
+ 182. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#data-munging
+ 183. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#getting-data-in-out
+ 184. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#missing-data
+ 185. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#differences-to-r-s-factor
+ 186. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html#gotchas
+ 187. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html
+ 188. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html#construction
+ 189. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html#operations
+ 190. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html#scalar-na-value
+ 191. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html
+ 192. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html#indexing-with-na-values
+ 193. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html#kleene-logical-operations
+ 194. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html
+ 195. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html#basic-plotting-plot
+ 196. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html#other-plots
+ 197. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html#plotting-with-missing-data
+ 198. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html#plotting-tools
+ 199. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html#plot-formatting
+ 200. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html#plotting-directly-with-matplotlib
+ 201. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html#plotting-backends
+ 202. https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html
+ 203. https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html#statistical-functions
+ 204. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
+ 205. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#splitting-an-object-into-groups
+ 206. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#iterating-through-groups
+ 207. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#selecting-a-group
+ 208. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#aggregation
+ 209. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#transformation
+ 210. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#filtration
+ 211. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#dispatching-to-instance-methods
+ 212. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#flexible-apply
+ 213. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#numba-accelerated-routines
+ 214. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#other-useful-features
+ 215. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#examples
+ 216. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html
+ 217. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#overview
+ 218. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#rolling-window
+ 219. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#weighted-window
+ 220. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#expanding-window
+ 221. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#exponentially-weighted-window
+ 222. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+ 223. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#overview
+ 224. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamps-vs-time-spans
+ 225. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#converting-to-timestamps
+ 226. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#generating-ranges-of-timestamps
+ 227. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timestamp-limitations
+ 228. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#indexing
+ 229. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#time-date-components
+ 230. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#dateoffset-objects
+ 231. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#time-series-related-instance-methods
+ 232. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#resampling
+ 233. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#time-span-representation
+ 234. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#converting-between-representations
+ 235. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#representing-out-of-bounds-spans
+ 236. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#time-zone-handling
+ 237. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html
+ 238. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html#parsing
+ 239. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html#operations
+ 240. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html#reductions
+ 241. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html#frequency-conversion
+ 242. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html#attributes
+ 243. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html#timedeltaindex
+ 244. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html#resampling
+ 245. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html
+ 246. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html#Building-styles
+ 247. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html#Finer-control:-slicing
+ 248. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html#Finer-Control:-Display-Values
+ 249. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html#Builtin-styles
+ 250. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html#Sharing-styles
+ 251. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html#Other-Options
+ 252. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html#Fun-stuff
+ 253. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html#Export-to-Excel
+ 254. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html#Extensibility
+ 255. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html
+ 256. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html#overview
+ 257. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html#getting-and-setting-options
+ 258. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html#setting-startup-options-in-python-ipython-environment
+ 259. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html#frequently-used-options
+ 260. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html#available-options
+ 261. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html#number-formatting
+ 262. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html#unicode-formatting
+ 263. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html#table-schema-display
+ 264. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html
+ 265. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#cython-writing-c-extensions-for-pandas
+ 266. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#using-numba
+ 267. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#expression-evaluation-via-eval
+ 268. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+ 269. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html#load-less-data
+ 270. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html#use-efficient-datatypes
+ 271. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html#use-chunking
+ 272. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html#use-other-libraries
+ 273. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html
+ 274. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html#sparsearray
+ 275. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html#sparsedtype
+ 276. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html#sparse-accessor
+ 277. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html#sparse-calculation
+ 278. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html#migrating
+ 279. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html#interaction-with-scipy-sparse
+ 280. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html
+ 281. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html#dataframe-memory-usage
+ 282. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html#using-if-truth-statements-with-pandas
+ 283. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html#nan-integer-na-values-and-na-type-promotions
+ 284. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html#differences-with-numpy
+ 285. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html#thread-safety
+ 286. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html#byte-ordering-issues
+ 287. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html
+ 288. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#idioms
+ 289. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#selection
+ 290. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#multiindexing
+ 291. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#missing-data
+ 292. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#grouping
+ 293. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#timeseries
+ 294. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#merge
+ 295. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#plotting
+ 296. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#data-in-out
+ 297. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#computation
+ 298. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#timedeltas
+ 299. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html#creating-example-data
+ 300. https://pandas.pydata.org/pandas-docs/stable/getting_started/tutorials.html
+ 301. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html
+ 302. http://sphinx-doc.org/

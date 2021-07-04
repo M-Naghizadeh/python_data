@@ -1,0 +1,1084 @@
+
+   #[1]Index [2]Search [3]Scaling to large datasets [4]Options and
+   settings
+
+   [5]logo
+   (BUTTON)
+     * [6]Getting started
+     * [7]User Guide
+     * [8]API reference
+     * [9]Development
+     * [10]Release notes
+
+     * [11]GitHub
+     * [12]Twitter
+
+   ____________________
+
+     * [13]10 minutes to pandas
+     * [14]Intro to data structures
+     * [15]Essential basic functionality
+     * [16]IO tools (text, CSV, HDF5, …)
+     * [17]Indexing and selecting data
+     * [18]MultiIndex / advanced indexing
+     * [19]Merge, join, concatenate and compare
+     * [20]Reshaping and pivot tables
+     * [21]Working with text data
+     * [22]Working with missing data
+     * [23]Duplicate Labels
+     * [24]Categorical data
+     * [25]Nullable integer data type
+     * [26]Nullable Boolean data type
+     * [27]Chart Visualization
+     * [28]Table Visualization
+     * [29]Computational tools
+     * [30]Group by: split-apply-combine
+     * [31]Windowing Operations
+     * [32]Time series / date functionality
+     * [33]Time deltas
+     * [34]Options and settings
+     * [35]Enhancing performance
+     * [36]Scaling to large datasets
+     * [37]Sparse data structures
+     * [38]Frequently Asked Questions (FAQ)
+     * [39]Cookbook
+
+   On this page
+
+     * [40]Cython (writing C extensions for pandas)
+          + [41]Pure Python
+          + [42]Plain Cython
+          + [43]Adding type
+          + [44]Using ndarray
+          + [45]More advanced techniques
+     * [46]Using Numba
+          + [47]Jit
+          + [48]Numba as an argument
+          + [49]Vectorize
+          + [50]Caveats
+     * [51]Expression evaluation via eval()
+          + [52]Supported syntax
+          + [53]eval() examples
+          + [54]The DataFrame.eval method
+          + [55]Local variables
+          + [56]pandas.eval() parsers
+          + [57]pandas.eval() backends
+          + [58]pandas.eval() performance
+          + [59]Technical minutia regarding expression evaluation
+
+Enhancing performance[60]¶
+
+   In this part of the tutorial, we will investigate how to speed up
+   certain functions operating on pandas DataFrames using three different
+   techniques: Cython, Numba and [61]pandas.eval(). We will see a speed
+   improvement of ~200 when we use Cython and Numba on a test function
+   operating row-wise on the DataFrame. Using [62]pandas.eval() we will
+   speed up a sum by an order of ~2.
+
+   Note
+
+   In addition to following the steps in this tutorial, users interested
+   in enhancing performance are highly encouraged to install the
+   [63]recommended dependencies for pandas. These dependencies are often
+   not installed by default, but will offer speed improvements if present.
+
+Cython (writing C extensions for pandas)[64]¶
+
+   For many use cases writing pandas in pure Python and NumPy is
+   sufficient. In some computationally heavy applications however, it can
+   be possible to achieve sizable speed-ups by offloading work to
+   [65]cython.
+
+   This tutorial assumes you have refactored as much as possible in
+   Python, for example by trying to remove for-loops and making use of
+   NumPy vectorization. It’s always worth optimising in Python first.
+
+   This tutorial walks through a “typical” process of cythonizing a slow
+   computation. We use an [66]example from the Cython documentation but in
+   the context of pandas. Our final cythonized solution is around 100
+   times faster than the pure Python solution.
+
+Pure Python[67]¶
+
+   We have a DataFrame to which we want to apply a function row-wise.
+In [1]: df = pd.DataFrame(
+   ...:     {
+   ...:         "a": np.random.randn(1000),
+   ...:         "b": np.random.randn(1000),
+   ...:         "N": np.random.randint(100, 1000, (1000)),
+   ...:         "x": "x",
+   ...:     }
+   ...: )
+   ...:
+
+In [2]: df
+Out[2]:
+            a         b    N  x
+0    0.469112 -0.218470  585  x
+1   -0.282863 -0.061645  841  x
+2   -1.509059 -0.723780  251  x
+3   -1.135632  0.551225  972  x
+4    1.212112 -0.497767  181  x
+..        ...       ...  ... ..
+995 -1.512743  0.874737  374  x
+996  0.933753  1.120790  246  x
+997 -0.308013  0.198768  157  x
+998 -0.079915  1.757555  977  x
+999 -1.010589 -1.115680  770  x
+
+[1000 rows x 4 columns]
+
+   Here’s the function in pure Python:
+In [3]: def f(x):
+   ...:     return x * (x - 1)
+   ...:
+
+In [4]: def integrate_f(a, b, N):
+   ...:     s = 0
+   ...:     dx = (b - a) / N
+   ...:     for i in range(N):
+   ...:         s += f(a + i * dx)
+   ...:     return s * dx
+   ...:
+
+   We achieve our result by using apply (row-wise):
+In [7]: %timeit df.apply(lambda x: integrate_f(x["a"], x["b"], x["N"]), axis=1)
+10 loops, best of 3: 174 ms per loop
+
+   But clearly this isn’t fast enough for us. Let’s take a look and see
+   where the time is spent during this operation (limited to the most time
+   consuming four calls) using the [68]prun ipython magic function:
+In [5]: %prun -l 4 df.apply(lambda x: integrate_f(x["a"], x["b"], x["N"]), axis=
+1)  # noqa E999
+         626348 function calls (626330 primitive calls) in 0.161 seconds
+
+   Ordered by: internal time
+   List reduced from 205 to 4 due to restriction <4>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     1000    0.088    0.000    0.128    0.000 <ipython-input-4-c2a74e076cf0>:1(i
+ntegrate_f)
+   552423    0.040    0.000    0.040    0.000 <ipython-input-3-c138bdd570e3>:1(f
+)
+     3000    0.004    0.000    0.020    0.000 series.py:928(__getitem__)
+     3000    0.003    0.000    0.014    0.000 series.py:1034(_get_value)
+
+   By far the majority of time is spend inside either integrate_f or f,
+   hence we’ll concentrate our efforts cythonizing these two functions.
+
+Plain Cython[69]¶
+
+   First we’re going to need to import the Cython magic function to
+   IPython:
+In [6]: %load_ext Cython
+
+   Now, let’s simply copy our functions over to Cython as is (the suffix
+   is here to distinguish between function versions):
+In [7]: %%cython
+   ...: def f_plain(x):
+   ...:     return x * (x - 1)
+   ...: def integrate_f_plain(a, b, N):
+   ...:     s = 0
+   ...:     dx = (b - a) / N
+   ...:     for i in range(N):
+   ...:         s += f_plain(a + i * dx)
+   ...:     return s * dx
+   ...:
+
+   Note
+
+   If you’re having trouble pasting the above into your ipython, you may
+   need to be using bleeding edge IPython for paste to play well with cell
+   magics.
+In [4]: %timeit df.apply(lambda x: integrate_f_plain(x["a"], x["b"], x["N"]), ax
+is=1)
+10 loops, best of 3: 85.5 ms per loop
+
+   Already this has shaved a third off, not too bad for a simple copy and
+   paste.
+
+Adding type[70]¶
+
+   We get another huge improvement simply by providing type information:
+In [8]: %%cython
+   ...: cdef double f_typed(double x) except? -2:
+   ...:     return x * (x - 1)
+   ...: cpdef double integrate_f_typed(double a, double b, int N):
+   ...:     cdef int i
+   ...:     cdef double s, dx
+   ...:     s = 0
+   ...:     dx = (b - a) / N
+   ...:     for i in range(N):
+   ...:         s += f_typed(a + i * dx)
+   ...:     return s * dx
+   ...:
+
+In [4]: %timeit df.apply(lambda x: integrate_f_typed(x["a"], x["b"], x["N"]), ax
+is=1)
+10 loops, best of 3: 20.3 ms per loop
+
+   Now, we’re talking! It’s now over ten times faster than the original
+   Python implementation, and we haven’t really modified the code. Let’s
+   have another look at what’s eating up time:
+In [9]: %prun -l 4 df.apply(lambda x: integrate_f_typed(x["a"], x["b"], x["N"]),
+ axis=1)
+         73918 function calls (73900 primitive calls) in 0.028 seconds
+
+   Ordered by: internal time
+   List reduced from 198 to 4 due to restriction <4>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     3000    0.003    0.000    0.017    0.000 series.py:928(__getitem__)
+     3000    0.002    0.000    0.011    0.000 series.py:1034(_get_value)
+     3000    0.002    0.000    0.005    0.000 base.py:3317(get_loc)
+     3000    0.001    0.000    0.003    0.000 base.py:5696(_maybe_cast_indexer)
+
+Using ndarray[71]¶
+
+   It’s calling series… a lot! It’s creating a Series from each row, and
+   get-ting from both the index and the series (three times for each row).
+   Function calls are expensive in Python, so maybe we could minimize
+   these by cythonizing the apply part.
+
+   Note
+
+   We are now passing ndarrays into the Cython function, fortunately
+   Cython plays very nicely with NumPy.
+In [10]: %%cython
+   ....: cimport numpy as np
+   ....: import numpy as np
+   ....: cdef double f_typed(double x) except? -2:
+   ....:     return x * (x - 1)
+   ....: cpdef double integrate_f_typed(double a, double b, int N):
+   ....:     cdef int i
+   ....:     cdef double s, dx
+   ....:     s = 0
+   ....:     dx = (b - a) / N
+   ....:     for i in range(N):
+   ....:         s += f_typed(a + i * dx)
+   ....:     return s * dx
+   ....: cpdef np.ndarray[double] apply_integrate_f(np.ndarray col_a, np.ndarray
+ col_b,
+   ....:                                            np.ndarray col_N):
+   ....:     assert (col_a.dtype == np.float_
+   ....:             and col_b.dtype == np.float_ and col_N.dtype == np.int_)
+   ....:     cdef Py_ssize_t i, n = len(col_N)
+   ....:     assert (len(col_a) == len(col_b) == n)
+   ....:     cdef np.ndarray[double] res = np.empty(n)
+   ....:     for i in range(len(col_a)):
+   ....:         res[i] = integrate_f_typed(col_a[i], col_b[i], col_N[i])
+   ....:     return res
+   ....:
+
+   The implementation is simple, it creates an array of zeros and loops
+   over the rows, applying our integrate_f_typed, and putting this in the
+   zeros array.
+
+   Warning
+
+   You can not pass a Series directly as a ndarray typed parameter to a
+   Cython function. Instead pass the actual ndarray using the
+   [72]Series.to_numpy(). The reason is that the Cython definition is
+   specific to an ndarray and not the passed Series.
+
+   So, do not do this:
+apply_integrate_f(df["a"], df["b"], df["N"])
+
+   But rather, use [73]Series.to_numpy() to get the underlying ndarray:
+apply_integrate_f(df["a"].to_numpy(), df["b"].to_numpy(), df["N"].to_numpy())
+
+   Note
+
+   Loops like this would be extremely slow in Python, but in Cython
+   looping over NumPy arrays is fast.
+In [4]: %timeit apply_integrate_f(df["a"].to_numpy(), df["b"].to_numpy(), df["N"
+].to_numpy())
+1000 loops, best of 3: 1.25 ms per loop
+
+   We’ve gotten another big improvement. Let’s check again where the time
+   is spent:
+In [11]: %prun -l 4 apply_integrate_f(df["a"].to_numpy(), df["b"].to_numpy(), df
+["N"].to_numpy())
+         260 function calls in 0.001 seconds
+
+   Ordered by: internal time
+   List reduced from 63 to 4 due to restriction <4>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.001    0.001    0.001    0.001 {built-in method _cython_magic_b88
+c189d82f7128c57cb8b2b4cf82b75.apply_integrate_f}
+        3    0.000    0.000    0.000    0.000 frame.py:3418(__getitem__)
+        3    0.000    0.000    0.000    0.000 managers.py:970(iget)
+        1    0.000    0.000    0.001    0.001 {built-in method builtins.exec}
+
+   As one might expect, the majority of the time is now spent in
+   apply_integrate_f, so if we wanted to make anymore efficiencies we must
+   continue to concentrate our efforts here.
+
+More advanced techniques[74]¶
+
+   There is still hope for improvement. Here’s an example of using some
+   more advanced Cython techniques:
+In [12]: %%cython
+   ....: cimport cython
+   ....: cimport numpy as np
+   ....: import numpy as np
+   ....: cdef double f_typed(double x) except? -2:
+   ....:     return x * (x - 1)
+   ....: cpdef double integrate_f_typed(double a, double b, int N):
+   ....:     cdef int i
+   ....:     cdef double s, dx
+   ....:     s = 0
+   ....:     dx = (b - a) / N
+   ....:     for i in range(N):
+   ....:         s += f_typed(a + i * dx)
+   ....:     return s * dx
+   ....: @cython.boundscheck(False)
+   ....: @cython.wraparound(False)
+   ....: cpdef np.ndarray[double] apply_integrate_f_wrap(np.ndarray[double] col_
+a,
+   ....:                                                 np.ndarray[double] col_
+b,
+   ....:                                                 np.ndarray[int] col_N):
+   ....:     cdef int i, n = len(col_N)
+   ....:     assert len(col_a) == len(col_b) == n
+   ....:     cdef np.ndarray[double] res = np.empty(n)
+   ....:     for i in range(n):
+   ....:         res[i] = integrate_f_typed(col_a[i], col_b[i], col_N[i])
+   ....:     return res
+   ....:
+
+In [4]: %timeit apply_integrate_f_wrap(df["a"].to_numpy(), df["b"].to_numpy(), d
+f["N"].to_numpy())
+1000 loops, best of 3: 987 us per loop
+
+   Even faster, with the caveat that a bug in our Cython code (an
+   off-by-one error, for example) might cause a segfault because memory
+   access isn’t checked. For more about boundscheck and wraparound, see
+   the Cython docs on [75]compiler directives.
+
+Using Numba[76]¶
+
+   A recent alternative to statically compiling Cython code, is to use a
+   dynamic jit-compiler, Numba.
+
+   Numba gives you the power to speed up your applications with high
+   performance functions written directly in Python. With a few
+   annotations, array-oriented and math-heavy Python code can be
+   just-in-time compiled to native machine instructions, similar in
+   performance to C, C++ and Fortran, without having to switch languages
+   or Python interpreters.
+
+   Numba works by generating optimized machine code using the LLVM
+   compiler infrastructure at import time, runtime, or statically (using
+   the included pycc tool). Numba supports compilation of Python to run on
+   either CPU or GPU hardware, and is designed to integrate with the
+   Python scientific software stack.
+
+   Note
+
+   You will need to install Numba. This is easy with conda, by using:
+   conda install numba, see [77]installing using miniconda.
+
+   Note
+
+   As of Numba version 0.20, pandas objects cannot be passed directly to
+   Numba-compiled functions. Instead, one must pass the NumPy array
+   underlying the pandas object to the Numba-compiled function as
+   demonstrated below.
+
+Jit[78]¶
+
+   We demonstrate how to use Numba to just-in-time compile our code. We
+   simply take the plain Python code from above and annotate with the @jit
+   decorator.
+import numba
+
+
+@numba.jit
+def f_plain(x):
+    return x * (x - 1)
+
+
+@numba.jit
+def integrate_f_numba(a, b, N):
+    s = 0
+    dx = (b - a) / N
+    for i in range(N):
+        s += f_plain(a + i * dx)
+    return s * dx
+
+
+@numba.jit
+def apply_integrate_f_numba(col_a, col_b, col_N):
+    n = len(col_N)
+    result = np.empty(n, dtype="float64")
+    assert len(col_a) == len(col_b) == n
+    for i in range(n):
+        result[i] = integrate_f_numba(col_a[i], col_b[i], col_N[i])
+    return result
+
+
+def compute_numba(df):
+    result = apply_integrate_f_numba(
+        df["a"].to_numpy(), df["b"].to_numpy(), df["N"].to_numpy()
+    )
+    return pd.Series(result, index=df.index, name="result")
+
+   Note that we directly pass NumPy arrays to the Numba function.
+   compute_numba is just a wrapper that provides a nicer interface by
+   passing/returning pandas objects.
+In [4]: %timeit compute_numba(df)
+1000 loops, best of 3: 798 us per loop
+
+   In this example, using Numba was faster than Cython.
+
+Numba as an argument[79]¶
+
+   Additionally, we can leverage the power of [80]Numba by calling it as
+   an argument in apply(). See [81]Computation tools for an extensive
+   example.
+
+Vectorize[82]¶
+
+   Numba can also be used to write vectorized functions that do not
+   require the user to explicitly loop over the observations of a vector;
+   a vectorized function will be applied to each row automatically.
+   Consider the following toy example of doubling each observation:
+import numba
+
+
+def double_every_value_nonumba(x):
+    return x * 2
+
+
+@numba.vectorize
+def double_every_value_withnumba(x):  # noqa E501
+    return x * 2
+
+# Custom function without numba
+In [5]: %timeit df["col1_doubled"] = df["a"].apply(double_every_value_nonumba)
+# noqa E501
+1000 loops, best of 3: 797 us per loop
+
+# Standard implementation (faster than a custom function)
+In [6]: %timeit df["col1_doubled"] = df["a"] * 2
+1000 loops, best of 3: 233 us per loop
+
+# Custom function with numba
+In [7]: %timeit df["col1_doubled"] = double_every_value_withnumba(df["a"].to_num
+py())
+1000 loops, best of 3: 145 us per loop
+
+Caveats[83]¶
+
+   Note
+
+   Numba will execute on any function, but can only accelerate certain
+   classes of functions.
+
+   Numba is best at accelerating functions that apply numerical functions
+   to NumPy arrays. When passed a function that only uses operations it
+   knows how to accelerate, it will execute in nopython mode.
+
+   If Numba is passed a function that includes something it doesn’t know
+   how to work with – a category that currently includes sets, lists,
+   dictionaries, or string functions – it will revert to object mode. In
+   object mode, Numba will execute but your code will not speed up
+   significantly. If you would prefer that Numba throw an error if it
+   cannot compile a function in a way that speeds up your code, pass Numba
+   the argument nopython=True (e.g. @numba.jit(nopython=True)). For more
+   on troubleshooting Numba modes, see the [84]Numba troubleshooting page.
+
+   Read more in the [85]Numba docs.
+
+Expression evaluation via [86]eval()[87]¶
+
+   The top-level function [88]pandas.eval() implements expression
+   evaluation of [89]Series and [90]DataFrame objects.
+
+   Note
+
+   To benefit from using [91]eval() you need to install numexpr. See the
+   [92]recommended dependencies section for more details.
+
+   The point of using [93]eval() for expression evaluation rather than
+   plain Python is two-fold: 1) large [94]DataFrame objects are evaluated
+   more efficiently and 2) large arithmetic and boolean expressions are
+   evaluated all at once by the underlying engine (by default numexpr is
+   used for evaluation).
+
+   Note
+
+   You should not use [95]eval() for simple expressions or for expressions
+   involving small DataFrames. In fact, [96]eval() is many orders of
+   magnitude slower for smaller expressions/objects than plain ol’ Python.
+   A good rule of thumb is to only use [97]eval() when you have a
+   DataFrame with more than 10,000 rows.
+
+   [98]eval() supports all arithmetic expressions supported by the engine
+   in addition to some extensions available only in pandas.
+
+   Note
+
+   The larger the frame and the larger the expression the more speedup you
+   will see from using [99]eval().
+
+Supported syntax[100]¶
+
+   These operations are supported by [101]pandas.eval():
+     * Arithmetic operations except for the left shift (<<) and right
+       shift (>>) operators, e.g., df + 2 * pi / s ** 4 % 42 -
+       the_golden_ratio
+     * Comparison operations, including chained comparisons, e.g., 2 < df
+       < df2
+     * Boolean operations, e.g., df < df2 and df3 < df4 or not df_bool
+     * list and tuple literals, e.g., [1, 2] or (1, 2)
+     * Attribute access, e.g., df.a
+     * Subscript expressions, e.g., df[0]
+     * Simple variable evaluation, e.g., pd.eval("df") (this is not very
+       useful)
+     * Math functions: sin, cos, exp, log, expm1, log1p, sqrt, sinh, cosh,
+       tanh, arcsin, arccos, arctan, arccosh, arcsinh, arctanh, abs,
+       arctan2 and log10.
+
+   This Python syntax is not allowed:
+     * Expressions
+
+          + Function calls other than math functions.
+          + is/is not operations
+          + if expressions
+          + lambda expressions
+          + list/set/dict comprehensions
+          + Literal dict and set expressions
+          + yield expressions
+          + Generator expressions
+          + Boolean expressions consisting of only scalar values
+
+     * Statements
+
+          + Neither [102]simple nor [103]compound statements are allowed.
+            This includes things like for, while, and if.
+
+[104]eval() examples[105]¶
+
+   [106]pandas.eval() works well with expressions containing large arrays.
+
+   First let’s create a few decent-sized arrays to play with:
+In [13]: nrows, ncols = 20000, 100
+
+In [14]: df1, df2, df3, df4 = [pd.DataFrame(np.random.randn(nrows, ncols)) for _
+ in range(4)]
+
+   Now let’s compare adding them together using plain ol’ Python versus
+   [107]eval():
+In [15]: %timeit df1 + df2 + df3 + df4
+5.98 ms +- 361 us per loop (mean +- std. dev. of 7 runs, 100 loops each)
+
+In [16]: %timeit pd.eval("df1 + df2 + df3 + df4")
+4.03 ms +- 122 us per loop (mean +- std. dev. of 7 runs, 100 loops each)
+
+   Now let’s do the same thing but with comparisons:
+In [17]: %timeit (df1 > 0) & (df2 > 0) & (df3 > 0) & (df4 > 0)
+4.95 ms +- 25.7 us per loop (mean +- std. dev. of 7 runs, 100 loops each)
+
+In [18]: %timeit pd.eval("(df1 > 0) & (df2 > 0) & (df3 > 0) & (df4 > 0)")
+4.28 ms +- 17.7 us per loop (mean +- std. dev. of 7 runs, 100 loops each)
+
+   [108]eval() also works with unaligned pandas objects:
+In [19]: s = pd.Series(np.random.randn(50))
+
+In [20]: %timeit df1 + df2 + df3 + df4 + s
+18.7 ms +- 84.4 us per loop (mean +- std. dev. of 7 runs, 100 loops each)
+
+In [21]: %timeit pd.eval("df1 + df2 + df3 + df4 + s")
+4.93 ms +- 27.2 us per loop (mean +- std. dev. of 7 runs, 100 loops each)
+
+   Note
+
+   Operations such as
+
+1 and 2  # would parse to 1 & 2, but should evaluate to 2
+3 or 4  # would parse to 3 | 4, but should evaluate to 3
+~1  # this is okay, but slower when using eval
+
+   should be performed in Python. An exception will be raised if you try
+   to perform any boolean/bitwise operations with scalar operands that are
+   not of type bool or np.bool_. Again, you should perform these kinds of
+   operations in plain Python.
+
+The DataFrame.eval method[109]¶
+
+   In addition to the top level [110]pandas.eval() function you can also
+   evaluate an expression in the “context” of a [111]DataFrame.
+In [22]: df = pd.DataFrame(np.random.randn(5, 2), columns=["a", "b"])
+
+In [23]: df.eval("a + b")
+Out[23]:
+0   -0.246747
+1    0.867786
+2   -1.626063
+3   -1.134978
+4   -1.027798
+dtype: float64
+
+   Any expression that is a valid [112]pandas.eval() expression is also a
+   valid [113]DataFrame.eval() expression, with the added benefit that you
+   don’t have to prefix the name of the [114]DataFrame to the column(s)
+   you’re interested in evaluating.
+
+   In addition, you can perform assignment of columns within an
+   expression. This allows for formulaic evaluation. The assignment target
+   can be a new column name or an existing column name, and it must be a
+   valid Python identifier.
+
+   The inplace keyword determines whether this assignment will performed
+   on the original DataFrame or return a copy with the new column.
+In [24]: df = pd.DataFrame(dict(a=range(5), b=range(5, 10)))
+
+In [25]: df.eval("c = a + b", inplace=True)
+
+In [26]: df.eval("d = a + b + c", inplace=True)
+
+In [27]: df.eval("a = 1", inplace=True)
+
+In [28]: df
+Out[28]:
+   a  b   c   d
+0  1  5   5  10
+1  1  6   7  14
+2  1  7   9  18
+3  1  8  11  22
+4  1  9  13  26
+
+   When inplace is set to False, the default, a copy of the DataFrame with
+   the new or modified columns is returned and the original frame is
+   unchanged.
+In [29]: df
+Out[29]:
+   a  b   c   d
+0  1  5   5  10
+1  1  6   7  14
+2  1  7   9  18
+3  1  8  11  22
+4  1  9  13  26
+
+In [30]: df.eval("e = a - c", inplace=False)
+Out[30]:
+   a  b   c   d   e
+0  1  5   5  10  -4
+1  1  6   7  14  -6
+2  1  7   9  18  -8
+3  1  8  11  22 -10
+4  1  9  13  26 -12
+
+In [31]: df
+Out[31]:
+   a  b   c   d
+0  1  5   5  10
+1  1  6   7  14
+2  1  7   9  18
+3  1  8  11  22
+4  1  9  13  26
+
+   As a convenience, multiple assignments can be performed by using a
+   multi-line string.
+In [32]: df.eval(
+   ....:     """
+   ....: c = a + b
+   ....: d = a + b + c
+   ....: a = 1""",
+   ....:     inplace=False,
+   ....: )
+   ....:
+Out[32]:
+   a  b   c   d
+0  1  5   6  12
+1  1  6   7  14
+2  1  7   8  16
+3  1  8   9  18
+4  1  9  10  20
+
+   The equivalent in standard Python would be
+In [33]: df = pd.DataFrame(dict(a=range(5), b=range(5, 10)))
+
+In [34]: df["c"] = df["a"] + df["b"]
+
+In [35]: df["d"] = df["a"] + df["b"] + df["c"]
+
+In [36]: df["a"] = 1
+
+In [37]: df
+Out[37]:
+   a  b   c   d
+0  1  5   5  10
+1  1  6   7  14
+2  1  7   9  18
+3  1  8  11  22
+4  1  9  13  26
+
+   The query method has a inplace keyword which determines whether the
+   query modifies the original frame.
+In [38]: df = pd.DataFrame(dict(a=range(5), b=range(5, 10)))
+
+In [39]: df.query("a > 2")
+Out[39]:
+   a  b
+3  3  8
+4  4  9
+
+In [40]: df.query("a > 2", inplace=True)
+
+In [41]: df
+Out[41]:
+   a  b
+3  3  8
+4  4  9
+
+Local variables[115]¶
+
+   You must explicitly reference any local variable that you want to use
+   in an expression by placing the @ character in front of the name. For
+   example,
+In [42]: df = pd.DataFrame(np.random.randn(5, 2), columns=list("ab"))
+
+In [43]: newcol = np.random.randn(len(df))
+
+In [44]: df.eval("b + @newcol")
+Out[44]:
+0   -0.173926
+1    2.493083
+2   -0.881831
+3   -0.691045
+4    1.334703
+dtype: float64
+
+In [45]: df.query("b < @newcol")
+Out[45]:
+          a         b
+0  0.863987 -0.115998
+2 -2.621419 -1.297879
+
+   If you don’t prefix the local variable with @, pandas will raise an
+   exception telling you the variable is undefined.
+
+   When using [116]DataFrame.eval() and [117]DataFrame.query(), this
+   allows you to have a local variable and a [118]DataFrame column with
+   the same name in an expression.
+In [46]: a = np.random.randn()
+
+In [47]: df.query("@a < a")
+Out[47]:
+          a         b
+0  0.863987 -0.115998
+
+In [48]: df.loc[a < df["a"]]  # same as the previous expression
+Out[48]:
+          a         b
+0  0.863987 -0.115998
+
+   With [119]pandas.eval() you cannot use the @ prefix at all, because it
+   isn’t defined in that context. pandas will let you know this if you try
+   to use @ in a top-level call to [120]pandas.eval(). For example,
+In [49]: a, b = 1, 2
+
+In [50]: pd.eval("@a + b")
+Traceback (most recent call last):
+
+  File "/opt/conda/envs/pandas/lib/python3.8/site-packages/IPython/core/interact
+iveshell.py", line 3441, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+
+  File "<ipython-input-50-f23f43311349>", line 1, in <module>
+    pd.eval("@a + b")
+
+  File "/pandas/pandas/core/computation/eval.py", line 337, in eval
+    _check_for_locals(expr, level, parser)
+
+  File "/pandas/pandas/core/computation/eval.py", line 161, in _check_for_locals
+    raise SyntaxError(msg)
+
+  File "<string>", line unknown
+SyntaxError: The '@' prefix is not allowed in top-level eval calls.
+please refer to your variables by name without the '@' prefix.
+
+   In this case, you should simply refer to the variables like you would
+   in standard Python.
+In [51]: pd.eval("a + b")
+Out[51]: 3
+
+[121]pandas.eval() parsers[122]¶
+
+   There are two different parsers and two different engines you can use
+   as the backend.
+
+   The default 'pandas' parser allows a more intuitive syntax for
+   expressing query-like operations (comparisons, conjunctions and
+   disjunctions). In particular, the precedence of the & and | operators
+   is made equal to the precedence of the corresponding boolean operations
+   and and or.
+
+   For example, the above conjunction can be written without parentheses.
+   Alternatively, you can use the 'python' parser to enforce strict Python
+   semantics.
+In [52]: expr = "(df1 > 0) & (df2 > 0) & (df3 > 0) & (df4 > 0)"
+
+In [53]: x = pd.eval(expr, parser="python")
+
+In [54]: expr_no_parens = "df1 > 0 & df2 > 0 & df3 > 0 & df4 > 0"
+
+In [55]: y = pd.eval(expr_no_parens, parser="pandas")
+
+In [56]: np.all(x == y)
+Out[56]: True
+
+   The same expression can be “anded” together with the word [123]and as
+   well:
+In [57]: expr = "(df1 > 0) & (df2 > 0) & (df3 > 0) & (df4 > 0)"
+
+In [58]: x = pd.eval(expr, parser="python")
+
+In [59]: expr_with_ands = "df1 > 0 and df2 > 0 and df3 > 0 and df4 > 0"
+
+In [60]: y = pd.eval(expr_with_ands, parser="pandas")
+
+In [61]: np.all(x == y)
+Out[61]: True
+
+   The and and or operators here have the same precedence that they would
+   in vanilla Python.
+
+[124]pandas.eval() backends[125]¶
+
+   There’s also the option to make [126]eval() operate identical to plain
+   ol’ Python.
+
+   Note
+
+   Using the 'python' engine is generally not useful, except for testing
+   other evaluation engines against it. You will achieve no performance
+   benefits using [127]eval() with engine='python' and in fact may incur a
+   performance hit.
+
+   You can see this by using [128]pandas.eval() with the 'python' engine.
+   It is a bit slower (not by much) than evaluating the same expression in
+   Python
+In [62]: %timeit df1 + df2 + df3 + df4
+5.54 ms +- 37.4 us per loop (mean +- std. dev. of 7 runs, 100 loops each)
+
+In [63]: %timeit pd.eval("df1 + df2 + df3 + df4", engine="python")
+6.26 ms +- 41 us per loop (mean +- std. dev. of 7 runs, 100 loops each)
+
+[129]pandas.eval() performance[130]¶
+
+   [131]eval() is intended to speed up certain kinds of operations. In
+   particular, those operations involving complex expressions with large
+   [132]DataFrame/[133]Series objects should see a significant performance
+   benefit. Here is a plot showing the running time of [134]pandas.eval()
+   as function of the size of the frame involved in the computation. The
+   two lines are two different engines.
+   ../_images/eval-perf.png
+
+   Note
+
+   Operations with smallish objects (around 15k-20k rows) are faster using
+   plain Python:
+
+   ../_images/eval-perf-small.png
+
+   This plot was created using a DataFrame with 3 columns each containing
+   floating point values generated using numpy.random.randn().
+
+Technical minutia regarding expression evaluation[135]¶
+
+   Expressions that would result in an object dtype or involve datetime
+   operations (because of NaT) must be evaluated in Python space. The main
+   reason for this behavior is to maintain backwards compatibility with
+   versions of NumPy < 1.7. In those versions of NumPy a call to
+   ndarray.astype(str) will truncate any strings that are more than 60
+   characters in length. Second, we can’t pass object arrays to numexpr
+   thus string comparisons must be evaluated in Python space.
+
+   The upshot is that this only applies to object-dtype expressions. So,
+   if you have an expression–for example
+In [64]: df = pd.DataFrame(
+   ....:     {"strings": np.repeat(list("cba"), 3), "nums": np.repeat(range(3),
+3)}
+   ....: )
+   ....:
+
+In [65]: df
+Out[65]:
+  strings  nums
+0       c     0
+1       c     0
+2       c     0
+3       b     1
+4       b     1
+5       b     1
+6       a     2
+7       a     2
+8       a     2
+
+In [66]: df.query("strings == 'a' and nums == 1")
+Out[66]:
+Empty DataFrame
+Columns: [strings, nums]
+Index: []
+
+   the numeric part of the comparison (nums == 1) will be evaluated by
+   numexpr.
+
+   In general, [136]DataFrame.query()/[137]pandas.eval() will evaluate the
+   subexpressions that can be evaluated by numexpr and those that must be
+   evaluated in Python space transparently to the user. This is done by
+   inferring the result type of an expression from its arguments and
+   operators.
+   [138]Options and settings [139]Scaling to large datasets
+
+   © Copyright 2008-2021, the pandas development team.
+
+   Created using [140]Sphinx 3.5.4.
+
+References
+
+   1. https://pandas.pydata.org/pandas-docs/stable/genindex.html
+   2. https://pandas.pydata.org/pandas-docs/stable/search.html
+   3. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+   4. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html
+   5. https://pandas.pydata.org/pandas-docs/stable/index.html
+   6. https://pandas.pydata.org/pandas-docs/stable/getting_started/index.html
+   7. https://pandas.pydata.org/pandas-docs/stable/user_guide/index.html
+   8. https://pandas.pydata.org/pandas-docs/stable/reference/index.html
+   9. https://pandas.pydata.org/pandas-docs/stable/development/index.html
+  10. https://pandas.pydata.org/pandas-docs/stable/whatsnew/index.html
+  11. https://github.com/pandas-dev/pandas
+  12. https://twitter.com/pandas_dev
+  13. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html
+  14. https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html
+  15. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html
+  16. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html
+  17. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html
+  18. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
+  19. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html
+  20. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html
+  21. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html
+  22. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+  23. https://pandas.pydata.org/pandas-docs/stable/user_guide/duplicates.html
+  24. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html
+  25. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html
+  26. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html
+  27. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html
+  28. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html
+  29. https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html
+  30. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
+  31. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html
+  32. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+  33. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html
+  34. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html
+  35. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html
+  36. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+  37. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html
+  38. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html
+  39. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html
+  40. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#cython-writing-c-extensions-for-pandas
+  41. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#pure-python
+  42. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#plain-cython
+  43. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#adding-type
+  44. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#using-ndarray
+  45. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#more-advanced-techniques
+  46. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#using-numba
+  47. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#jit
+  48. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#numba-as-an-argument
+  49. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#vectorize
+  50. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#caveats
+  51. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#expression-evaluation-via-eval
+  52. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#supported-syntax
+  53. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#eval-examples
+  54. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#the-dataframe-eval-method
+  55. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#local-variables
+  56. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#pandas-eval-parsers
+  57. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#pandas-eval-backends
+  58. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#pandas-eval-performance
+  59. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#technical-minutia-regarding-expression-evaluation
+  60. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#enhancing-performance
+  61. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  62. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  63. https://pandas.pydata.org/pandas-docs/stable/getting_started/install.html#install-recommended-dependencies
+  64. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#cython-writing-c-extensions-for-pandas
+  65. https://cython.org/
+  66. http://docs.cython.org/src/quickstart/cythonize.html
+  67. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#pure-python
+  68. https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-prun
+  69. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#plain-cython
+  70. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#adding-type
+  71. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#using-ndarray
+  72. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.to_numpy.html#pandas.Series.to_numpy
+  73. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.to_numpy.html#pandas.Series.to_numpy
+  74. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#more-advanced-techniques
+  75. https://cython.readthedocs.io/en/latest/src/reference/compilation.html?highlight=wraparound#compiler-directives
+  76. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#using-numba
+  77. https://pandas.pydata.org/pandas-docs/stable/getting_started/install.html#install-miniconda
+  78. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#jit
+  79. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#numba-as-an-argument
+  80. https://numba.pydata.org/
+  81. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html#window-numba-engine
+  82. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#vectorize
+  83. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#caveats
+  84. https://numba.pydata.org/numba-doc/latest/user/troubleshoot.html#the-compiled-code-is-too-slow
+  85. https://numba.pydata.org/
+  86. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  87. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#expression-evaluation-via-eval
+  88. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  89. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+  90. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  91. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  92. https://pandas.pydata.org/pandas-docs/stable/getting_started/install.html#install-recommended-dependencies
+  93. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  94. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+  95. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  96. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  97. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  98. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+  99. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 100. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#supported-syntax
+ 101. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 102. https://docs.python.org/3/reference/simple_stmts.html
+ 103. https://docs.python.org/3/reference/compound_stmts.html
+ 104. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 105. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#eval-examples
+ 106. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 107. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 108. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 109. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#the-dataframe-eval-method
+ 110. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 111. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+ 112. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 113. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.eval.html#pandas.DataFrame.eval
+ 114. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+ 115. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#local-variables
+ 116. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.eval.html#pandas.DataFrame.eval
+ 117. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html#pandas.DataFrame.query
+ 118. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+ 119. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 120. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 121. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 122. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#pandas-eval-parsers
+ 123. https://docs.python.org/3/reference/expressions.html#and
+ 124. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 125. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#pandas-eval-backends
+ 126. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 127. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 128. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 129. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 130. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#pandas-eval-performance
+ 131. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 132. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame
+ 133. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series
+ 134. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 135. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html#technical-minutia-regarding-expression-evaluation
+ 136. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html#pandas.DataFrame.query
+ 137. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
+ 138. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html
+ 139. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+ 140. http://sphinx-doc.org/

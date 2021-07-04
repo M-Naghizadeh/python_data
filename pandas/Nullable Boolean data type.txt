@@ -1,0 +1,263 @@
+
+   #[1]Index [2]Search [3]Chart Visualization [4]Nullable integer data
+   type
+
+   [5]logo
+   (BUTTON)
+     * [6]Getting started
+     * [7]User Guide
+     * [8]API reference
+     * [9]Development
+     * [10]Release notes
+
+     * [11]GitHub
+     * [12]Twitter
+
+   ____________________
+
+     * [13]10 minutes to pandas
+     * [14]Intro to data structures
+     * [15]Essential basic functionality
+     * [16]IO tools (text, CSV, HDF5, …)
+     * [17]Indexing and selecting data
+     * [18]MultiIndex / advanced indexing
+     * [19]Merge, join, concatenate and compare
+     * [20]Reshaping and pivot tables
+     * [21]Working with text data
+     * [22]Working with missing data
+     * [23]Duplicate Labels
+     * [24]Categorical data
+     * [25]Nullable integer data type
+     * [26]Nullable Boolean data type
+     * [27]Chart Visualization
+     * [28]Table Visualization
+     * [29]Computational tools
+     * [30]Group by: split-apply-combine
+     * [31]Windowing Operations
+     * [32]Time series / date functionality
+     * [33]Time deltas
+     * [34]Options and settings
+     * [35]Enhancing performance
+     * [36]Scaling to large datasets
+     * [37]Sparse data structures
+     * [38]Frequently Asked Questions (FAQ)
+     * [39]Cookbook
+
+   On this page
+
+     * [40]Indexing with NA values
+     * [41]Kleene logical operations
+
+Nullable Boolean data type[42]¶
+
+   New in version 1.0.0.
+
+Indexing with NA values[43]¶
+
+   pandas allows indexing with NA values in a boolean array, which are
+   treated as False.
+
+   Changed in version 1.0.2.
+In [1]: s = pd.Series([1, 2, 3])
+
+In [2]: mask = pd.array([True, False, pd.NA], dtype="boolean")
+
+In [3]: s[mask]
+Out[3]:
+0    1
+dtype: int64
+
+   If you would prefer to keep the NA values you can manually fill them
+   with fillna(True).
+In [4]: s[mask.fillna(True)]
+Out[4]:
+0    1
+2    3
+dtype: int64
+
+Kleene logical operations[44]¶
+
+   [45]arrays.BooleanArray implements [46]Kleene Logic (sometimes called
+   three-value logic) for logical operations like & (and), | (or) and ^
+   (exclusive-or).
+
+   This table demonstrates the results for every combination. These
+   operations are symmetrical, so flipping the left- and right-hand side
+   makes no difference in the result.
+
+   Expression
+
+   Result
+
+   True & True
+
+   True
+
+   True & False
+
+   False
+
+   True & NA
+
+   NA
+
+   False & False
+
+   False
+
+   False & NA
+
+   False
+
+   NA & NA
+
+   NA
+
+   True | True
+
+   True
+
+   True | False
+
+   True
+
+   True | NA
+
+   True
+
+   False | False
+
+   False
+
+   False | NA
+
+   NA
+
+   NA | NA
+
+   NA
+
+   True ^ True
+
+   False
+
+   True ^ False
+
+   True
+
+   True ^ NA
+
+   NA
+
+   False ^ False
+
+   False
+
+   False ^ NA
+
+   NA
+
+   NA ^ NA
+
+   NA
+
+   When an NA is present in an operation, the output value is NA only if
+   the result cannot be determined solely based on the other input. For
+   example, True | NA is True, because both True | True and True | False
+   are True. In that case, we don’t actually need to consider the value of
+   the NA.
+
+   On the other hand, True & NA is NA. The result depends on whether the
+   NA really is True or False, since True & True is True, but True & False
+   is False, so we can’t determine the output.
+
+   This differs from how np.nan behaves in logical operations. pandas
+   treated np.nan is always false in the output.
+
+   In or
+In [5]: pd.Series([True, False, np.nan], dtype="object") | True
+Out[5]:
+0     True
+1     True
+2    False
+dtype: bool
+
+In [6]: pd.Series([True, False, np.nan], dtype="boolean") | True
+Out[6]:
+0    True
+1    True
+2    True
+dtype: boolean
+
+   In and
+In [7]: pd.Series([True, False, np.nan], dtype="object") & True
+Out[7]:
+0     True
+1    False
+2    False
+dtype: bool
+
+In [8]: pd.Series([True, False, np.nan], dtype="boolean") & True
+Out[8]:
+0     True
+1    False
+2     <NA>
+dtype: boolean
+
+   [47]Nullable integer data type [48]Chart Visualization
+
+   © Copyright 2008-2021, the pandas development team.
+
+   Created using [49]Sphinx 3.5.4.
+
+References
+
+   1. https://pandas.pydata.org/pandas-docs/stable/genindex.html
+   2. https://pandas.pydata.org/pandas-docs/stable/search.html
+   3. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html
+   4. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html
+   5. https://pandas.pydata.org/pandas-docs/stable/index.html
+   6. https://pandas.pydata.org/pandas-docs/stable/getting_started/index.html
+   7. https://pandas.pydata.org/pandas-docs/stable/user_guide/index.html
+   8. https://pandas.pydata.org/pandas-docs/stable/reference/index.html
+   9. https://pandas.pydata.org/pandas-docs/stable/development/index.html
+  10. https://pandas.pydata.org/pandas-docs/stable/whatsnew/index.html
+  11. https://github.com/pandas-dev/pandas
+  12. https://twitter.com/pandas_dev
+  13. https://pandas.pydata.org/pandas-docs/stable/user_guide/10min.html
+  14. https://pandas.pydata.org/pandas-docs/stable/user_guide/dsintro.html
+  15. https://pandas.pydata.org/pandas-docs/stable/user_guide/basics.html
+  16. https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html
+  17. https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html
+  18. https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
+  19. https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html
+  20. https://pandas.pydata.org/pandas-docs/stable/user_guide/reshaping.html
+  21. https://pandas.pydata.org/pandas-docs/stable/user_guide/text.html
+  22. https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
+  23. https://pandas.pydata.org/pandas-docs/stable/user_guide/duplicates.html
+  24. https://pandas.pydata.org/pandas-docs/stable/user_guide/categorical.html
+  25. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html
+  26. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html
+  27. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html
+  28. https://pandas.pydata.org/pandas-docs/stable/user_guide/style.html
+  29. https://pandas.pydata.org/pandas-docs/stable/user_guide/computation.html
+  30. https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
+  31. https://pandas.pydata.org/pandas-docs/stable/user_guide/window.html
+  32. https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html
+  33. https://pandas.pydata.org/pandas-docs/stable/user_guide/timedeltas.html
+  34. https://pandas.pydata.org/pandas-docs/stable/user_guide/options.html
+  35. https://pandas.pydata.org/pandas-docs/stable/user_guide/enhancingperf.html
+  36. https://pandas.pydata.org/pandas-docs/stable/user_guide/scale.html
+  37. https://pandas.pydata.org/pandas-docs/stable/user_guide/sparse.html
+  38. https://pandas.pydata.org/pandas-docs/stable/user_guide/gotchas.html
+  39. https://pandas.pydata.org/pandas-docs/stable/user_guide/cookbook.html
+  40. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html#indexing-with-na-values
+  41. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html#kleene-logical-operations
+  42. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html#nullable-boolean-data-type
+  43. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html#indexing-with-na-values
+  44. https://pandas.pydata.org/pandas-docs/stable/user_guide/boolean.html#kleene-logical-operations
+  45. https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.arrays.BooleanArray.html#pandas.arrays.BooleanArray
+  46. https://en.wikipedia.org/wiki/Three-valued_logic#Kleene_and_Priest_logics
+  47. https://pandas.pydata.org/pandas-docs/stable/user_guide/integer_na.html
+  48. https://pandas.pydata.org/pandas-docs/stable/user_guide/visualization.html
+  49. http://sphinx-doc.org/
