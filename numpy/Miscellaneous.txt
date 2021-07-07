@@ -1,0 +1,293 @@
+
+   #[1]Index [2]Search [3]NumPy for MATLAB users [4]Subclassing ndarray
+
+   [5]logo (BUTTON)
+     * [6]User Guide
+     * [7]API reference
+     * [8]Development
+
+     * [9]GitHub
+     * [10]Twitter
+
+   ____________________
+
+     * [11]What is NumPy?
+     * [12]Installation
+     * [13]NumPy quickstart
+     * [14]NumPy: the absolute basics for beginners
+     * [15]NumPy fundamentals
+     * [16]Miscellaneous
+     * [17]NumPy for MATLAB users
+     * [18]Building from source
+     * [19]Using NumPy C-API
+     * [20]NumPy Tutorials
+     * [21]NumPy How Tos
+     * [22]For downstream package authors
+     * [23]F2PY Users Guide and Reference Manual
+     * [24]Glossary
+     * [25]Under-the-hood Documentation for developers
+     * [26]NumPy’s Documentation
+     * [27]Reporting bugs
+     * [28]Release Notes
+     * [29]Documentation conventions
+     * [30]NumPy license
+
+   On this page
+
+     * [31]IEEE 754 Floating Point Special Values
+     * [32]How numpy handles numerical exceptions
+     * [33]Examples
+     * [34]Interfacing to C
+     * [35]Interfacing to Fortran:
+     * [36]Interfacing to C++:
+
+Miscellaneous[37]¶
+
+IEEE 754 Floating Point Special Values[38]¶
+
+   Special values defined in numpy: nan, inf,
+
+   NaNs can be used as a poor-man’s mask (if you don’t care what the
+   original value was)
+
+   Note: cannot use equality to test NaNs. E.g.:
+>>> myarr = np.array([1., 0., np.nan, 3.])
+>>> np.nonzero(myarr == np.nan)
+(array([], dtype=int64),)
+>>> np.nan == np.nan  # is always False! Use special numpy functions instead.
+False
+>>> myarr[myarr == np.nan] = 0. # doesn't work
+>>> myarr
+array([  1.,   0.,  NaN,   3.])
+>>> myarr[np.isnan(myarr)] = 0. # use this instead find
+>>> myarr
+array([ 1.,  0.,  0.,  3.])
+
+   Other related special value functions:
+isinf():    True if value is inf
+isfinite(): True if not nan or inf
+nan_to_num(): Map nan to 0, inf to max float, -inf to min float
+
+   The following corresponds to the usual functions except that nans are
+   excluded from the results:
+nansum()
+nanmax()
+nanmin()
+nanargmax()
+nanargmin()
+
+>>> x = np.arange(10.)
+>>> x[3] = np.nan
+>>> x.sum()
+nan
+>>> np.nansum(x)
+42.0
+
+How numpy handles numerical exceptions[39]¶
+
+   The default is to 'warn' for invalid, divide, and overflow and 'ignore'
+   for underflow. But this can be changed, and it can be set individually
+   for different kinds of exceptions. The different behaviors are:
+
+     * ‘ignore’ : Take no action when the exception occurs.
+     * ‘warn’ : Print a RuntimeWarning (via the Python [40]warnings
+       module).
+     * ‘raise’ : Raise a FloatingPointError.
+     * ‘call’ : Call a function specified using the seterrcall function.
+     * ‘print’ : Print a warning directly to stdout.
+     * ‘log’ : Record error in a Log object specified by seterrcall.
+
+   These behaviors can be set for all kinds of errors or specific ones:
+
+     * all : apply to all numeric exceptions
+     * invalid : when NaNs are generated
+     * divide : divide by zero (for integers as well!)
+     * overflow : floating point overflows
+     * underflow : floating point underflows
+
+   Note that integer divide-by-zero is handled by the same machinery.
+   These behaviors are set on a per-thread basis.
+
+Examples[41]¶
+
+>>> oldsettings = np.seterr(all='warn')
+>>> np.zeros(5,dtype=np.float32)/0.
+invalid value encountered in divide
+>>> j = np.seterr(under='ignore')
+>>> np.array([1.e-100])**10
+>>> j = np.seterr(invalid='raise')
+>>> np.sqrt(np.array([-1.]))
+FloatingPointError: invalid value encountered in sqrt
+>>> def errorhandler(errstr, errflag):
+...      print("saw stupid error!")
+>>> np.seterrcall(errorhandler)
+<function err_handler at 0x...>
+>>> j = np.seterr(all='call')
+>>> np.zeros(5, dtype=np.int32)/0
+FloatingPointError: invalid value encountered in divide
+saw stupid error!
+>>> j = np.seterr(**oldsettings) # restore previous
+...                              # error-handling settings
+
+Interfacing to C[42]¶
+
+   Only a survey of the choices. Little detail on how each works.
+    1. Bare metal, wrap your own C-code manually.
+
+     * Plusses:
+          + Efficient
+          + No dependencies on other tools
+     * Minuses:
+          + Lots of learning overhead:
+               o need to learn basics of Python C API
+               o need to learn basics of numpy C API
+               o need to learn how to handle reference counting and love
+                 it.
+          + Reference counting often difficult to get right.
+               o getting it wrong leads to memory leaks, and worse,
+                 segfaults
+          + API will change for Python 3.0!
+
+    2. Cython
+
+     * Plusses:
+          + avoid learning C API’s
+          + no dealing with reference counting
+          + can code in pseudo python and generate C code
+          + can also interface to existing C code
+          + should shield you from changes to Python C api
+          + has become the de-facto standard within the scientific Python
+            community
+          + fast indexing support for arrays
+     * Minuses:
+          + Can write code in non-standard form which may become obsolete
+          + Not as flexible as manual wrapping
+
+    3. ctypes
+
+     * Plusses:
+          + part of Python standard library
+          + good for interfacing to existing sharable libraries,
+            particularly Windows DLLs
+          + avoids API/reference counting issues
+          + good numpy support: arrays have all these in their ctypes
+            attribute:
+a.ctypes.data
+a.ctypes.data_as
+a.ctypes.shape
+a.ctypes.shape_as
+a.ctypes.strides
+a.ctypes.strides_as
+
+     * Minuses:
+          + can’t use for writing code to be turned into C extensions,
+            only a wrapper tool.
+
+    4. SWIG (automatic wrapper generator)
+
+     * Plusses:
+          + around a long time
+          + multiple scripting language support
+          + C++ support
+          + Good for wrapping large (many functions) existing C libraries
+     * Minuses:
+          + generates lots of code between Python and the C code
+          + can cause performance problems that are nearly impossible to
+            optimize out
+          + interface files can be hard to write
+          + doesn’t necessarily avoid reference counting issues or needing
+            to know API’s
+
+    5. scipy.weave
+
+     * Plusses:
+          + can turn many numpy expressions into C code
+          + dynamic compiling and loading of generated C code
+          + can embed pure C code in Python module and have weave extract,
+            generate interfaces and compile, etc.
+     * Minuses:
+          + Future very uncertain: it’s the only part of Scipy not ported
+            to Python 3 and is effectively deprecated in favor of Cython.
+
+    6. Psyco
+
+     * Plusses:
+          + Turns pure python into efficient machine code through jit-like
+            optimizations
+          + very fast when it optimizes well
+     * Minuses:
+          + Only on intel (windows?)
+          + Doesn’t do much for numpy?
+
+Interfacing to Fortran:[43]¶
+
+   The clear choice to wrap Fortran code is [44]f2py.
+
+   Pyfort is an older alternative, but not supported any longer. Fwrap is
+   a newer project that looked promising but isn’t being developed any
+   longer.
+
+Interfacing to C++:[45]¶
+
+    1. Cython
+    2. CXX
+    3. Boost.python
+    4. SWIG
+    5. SIP (used mainly in PyQT)
+
+   [46]Subclassing ndarray [47]NumPy for MATLAB users
+
+   © Copyright 2008-2021, The NumPy community.
+   Last updated on Jun 22, 2021.
+   Created using [48]Sphinx 4.0.1.
+
+References
+
+   1. https://numpy.org/doc/1.21/genindex.html
+   2. https://numpy.org/doc/1.21/search.html
+   3. https://numpy.org/doc/1.21/user/numpy-for-matlab-users.html
+   4. https://numpy.org/doc/1.21/user/basics.subclassing.html
+   5. https://numpy.org/doc/1.21/index.html
+   6. https://numpy.org/doc/1.21/user/index.html
+   7. https://numpy.org/doc/1.21/reference/index.html
+   8. https://numpy.org/doc/1.21/dev/index.html
+   9. https://github.com/numpy/numpy
+  10. https://twitter.com/numpy_team
+  11. https://numpy.org/doc/1.21/user/whatisnumpy.html
+  12. https://numpy.org/install/
+  13. https://numpy.org/doc/1.21/user/quickstart.html
+  14. https://numpy.org/doc/1.21/user/absolute_beginners.html
+  15. https://numpy.org/doc/1.21/user/basics.html
+  16. https://numpy.org/doc/1.21/user/misc.html
+  17. https://numpy.org/doc/1.21/user/numpy-for-matlab-users.html
+  18. https://numpy.org/doc/1.21/user/building.html
+  19. https://numpy.org/doc/1.21/user/c-info.html
+  20. https://numpy.org/doc/1.21/user/tutorials_index.html
+  21. https://numpy.org/doc/1.21/user/howtos_index.html
+  22. https://numpy.org/doc/1.21/user/depending_on_numpy.html
+  23. https://numpy.org/doc/1.21/f2py/index.html
+  24. https://numpy.org/doc/1.21/glossary.html
+  25. https://numpy.org/doc/1.21/dev/underthehood.html
+  26. https://numpy.org/doc/1.21/docs/index.html
+  27. https://numpy.org/doc/1.21/bugs.html
+  28. https://numpy.org/doc/1.21/release.html
+  29. https://numpy.org/doc/1.21/doc_conventions.html
+  30. https://numpy.org/doc/1.21/license.html
+  31. https://numpy.org/doc/1.21/user/misc.html#ieee-754-floating-point-special-values
+  32. https://numpy.org/doc/1.21/user/misc.html#how-numpy-handles-numerical-exceptions
+  33. https://numpy.org/doc/1.21/user/misc.html#examples
+  34. https://numpy.org/doc/1.21/user/misc.html#interfacing-to-c
+  35. https://numpy.org/doc/1.21/user/misc.html#interfacing-to-fortran
+  36. https://numpy.org/doc/1.21/user/misc.html#id1
+  37. https://numpy.org/doc/1.21/user/misc.html#miscellaneous
+  38. https://numpy.org/doc/1.21/user/misc.html#ieee-754-floating-point-special-values
+  39. https://numpy.org/doc/1.21/user/misc.html#how-numpy-handles-numerical-exceptions
+  40. https://docs.python.org/dev/library/warnings.html#module-warnings
+  41. https://numpy.org/doc/1.21/user/misc.html#examples
+  42. https://numpy.org/doc/1.21/user/misc.html#interfacing-to-c
+  43. https://numpy.org/doc/1.21/user/misc.html#interfacing-to-fortran
+  44. https://docs.scipy.org/doc/numpy/f2py/
+  45. https://numpy.org/doc/1.21/user/misc.html#id1
+  46. https://numpy.org/doc/1.21/user/basics.subclassing.html
+  47. https://numpy.org/doc/1.21/user/numpy-for-matlab-users.html
+  48. https://www.sphinx-doc.org/

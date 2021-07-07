@@ -1,0 +1,108 @@
+
+   #[1]Index [2]Search [3]What is NumPy? [4]NumPy Documentation
+
+   [5]logo (BUTTON)
+     * [6]User Guide
+     * [7]API reference
+     * [8]Development
+
+     * [9]GitHub
+     * [10]Twitter
+
+   ____________________
+
+     * [11]What is NumPy?
+     * [12]Installation
+     * [13][[NumPy quickstart]]
+     * [14][[NumPy: the absolute basics for beginners]]
+     * [15][[NumPy fundamentals]]
+     * [16][[Miscellaneous]]
+     * [17]NumPy for MATLAB users
+     * [18]Building from source
+     * [19]Using NumPy C-API
+     * [20]NumPy Tutorials 
+                [[linalgebrap on n-dimentional array]]
+     *          [[Masked arrays]]
+     * [21]NumPy How Tos
+     * [22]For downstream package authors
+     * [23]F2PY Users Guide and Reference Manual
+     * [24]Glossary
+     * [25]Under-the-hood Documentation for developers
+     * [26]NumPy’s Documentation
+     * [27]Reporting bugs
+     * [28]Release Notes
+     * [29]Documentation conventions
+     * [30]NumPy license
+
+NumPy user guide[31]¶
+
+   This guide is an overview and explains the important features; details
+   are found in [32]Command Reference.
+     * [33]What is NumPy?
+     * [34]Installation
+     * [35]NumPy quickstart
+     * [36]NumPy: the absolute basics for beginners
+     * [37]NumPy fundamentals
+     * [38]Miscellaneous
+     * [39]NumPy for MATLAB users
+     * [40]Building from source
+     * [41]Using NumPy C-API
+     * [42]NumPy Tutorials
+     * [43]NumPy How Tos
+     * [44]For downstream package authors
+
+   [45]NumPy Documentation [46]What is NumPy?
+
+   © Copyright 2008-2021, The NumPy community.
+   Last updated on Jun 22, 2021.
+   Created using [47]Sphinx 4.0.1.
+
+References
+
+   1. https://numpy.org/doc/1.21/genindex.html
+   2. https://numpy.org/doc/1.21/search.html
+   3. https://numpy.org/doc/1.21/user/whatisnumpy.html
+   4. https://numpy.org/doc/1.21/index.html
+   5. https://numpy.org/doc/1.21/index.html
+   6. https://numpy.org/doc/1.21/user/index.html
+   7. https://numpy.org/doc/1.21/reference/index.html
+   8. https://numpy.org/doc/1.21/dev/index.html
+   9. https://github.com/numpy/numpy
+  10. https://twitter.com/numpy_team
+  11. https://numpy.org/doc/1.21/user/whatisnumpy.html
+  12. https://numpy.org/install/
+  13. https://numpy.org/doc/1.21/user/quickstart.html
+  14. https://numpy.org/doc/1.21/user/absolute_beginners.html
+  15. https://numpy.org/doc/1.21/user/basics.html
+  16. https://numpy.org/doc/1.21/user/misc.html
+  17. https://numpy.org/doc/1.21/user/numpy-for-matlab-users.html
+  18. https://numpy.org/doc/1.21/user/building.html
+  19. https://numpy.org/doc/1.21/user/c-info.html
+  20. https://numpy.org/doc/1.21/user/tutorials_index.html
+  21. https://numpy.org/doc/1.21/user/howtos_index.html
+  22. https://numpy.org/doc/1.21/user/depending_on_numpy.html
+  23. https://numpy.org/doc/1.21/f2py/index.html
+  24. https://numpy.org/doc/1.21/glossary.html
+  25. https://numpy.org/doc/1.21/dev/underthehood.html
+  26. https://numpy.org/doc/1.21/docs/index.html
+  27. https://numpy.org/doc/1.21/bugs.html
+  28. https://numpy.org/doc/1.21/release.html
+  29. https://numpy.org/doc/1.21/doc_conventions.html
+  30. https://numpy.org/doc/1.21/license.html
+  31. https://numpy.org/doc/1.21/user/index.html#numpy-user-guide
+  32. https://docs.python.org/dev/distutils/commandref.html#reference
+  33. https://numpy.org/doc/1.21/user/whatisnumpy.html
+  34. https://numpy.org/install/
+  35. https://numpy.org/doc/1.21/user/quickstart.html
+  36. https://numpy.org/doc/1.21/user/absolute_beginners.html
+  37. https://numpy.org/doc/1.21/user/basics.html
+  38. https://numpy.org/doc/1.21/user/misc.html
+  39. https://numpy.org/doc/1.21/user/numpy-for-matlab-users.html
+  40. https://numpy.org/doc/1.21/user/building.html
+  41. https://numpy.org/doc/1.21/user/c-info.html
+  42. https://numpy.org/doc/1.21/user/tutorials_index.html
+  43. https://numpy.org/doc/1.21/user/howtos_index.html
+  44. https://numpy.org/doc/1.21/user/depending_on_numpy.html
+  45. https://numpy.org/doc/1.21/index.html
+  46. https://numpy.org/doc/1.21/user/whatisnumpy.html
+  47. https://www.sphinx-doc.org/
